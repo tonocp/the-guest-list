@@ -84,3 +84,6 @@ npm run build                         # vue-tsc -b && vite build, debe compilar 
 - No añadir dependencias de fuentes/CDN externas — rompe el requisito de PWA offline.
 - No dar por hecho que "más tests pasando" = "el generador funciona bien" sin también
   correr `stress-generate.ts` — los tests solo cubren unas pocas semillas fijas.
+- No dejar `docs/` desactualizado tras un cambio de funcionalidad — ver la sección
+  "Mantener la documentación al día" en [`AGENTS.md`](../AGENTS.md), es una regla dura,
+  no una sugerencia.
