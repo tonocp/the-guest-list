@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: #e8e0cf;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+/*
+ * No web font is loaded (the app must work fully offline as an installed PWA),
+ * so headings fake a blocky "pixel UI" look with a monospace stack, uppercase
+ * tracking and a hard offset shadow instead of blur.
+ */
+.pixel-heading {
+  font-family: 'Courier New', ui-monospace, Menlo, Consolas, monospace;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-shadow: 2px 2px 0 rgba(61, 52, 40, 0.25);
+}
