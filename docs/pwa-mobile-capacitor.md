@@ -20,6 +20,21 @@ deliberada por el requisito de offline. Los títulos usan una clase `.pixel-head
 (en `src/style.css`) que imita un look "pixel UI" solo con CSS (monoespaciada,
 mayúsculas, sombra dura sin blur) en vez de cargar una webfont.
 
+⚠️ **Trampa al depurar en local**: el Service Worker de desarrollo
+(`devOptions.enabled: true`, activado a propósito para que las pruebas en el móvil se
+comporten como producción) puede servir una versión **cacheada** de un módulo aunque
+el archivo fuente ya esté corregido — ni una recarga normal lo nota, el bug parece no
+arreglarse. Si sospechas esto, en la consola del navegador:
+
+```js
+;(await navigator.serviceWorker.getRegistrations()).forEach(r => r.unregister())
+;(await caches.keys()).forEach(k => caches.delete(k))
+```
+
+y recarga. Costó tiempo real de depuración confundirlo con un bug de código durante el
+desarrollo de [`persistence.md`](./persistence.md) — si un fix "no hace efecto" en el
+navegador, comprueba esto antes de seguir buscando en el código.
+
 ## HTTPS local (necesario para Service Worker fuera de `localhost`)
 
 El proyecto usa `vite-plugin-mkcert`. La primera vez hay que confiar en su CA

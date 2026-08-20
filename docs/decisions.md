@@ -22,7 +22,9 @@ la ceremonia:
 - **Hexagonal**: el proyecto ya tiene la sustancia (dominio puro en `src/lib/`, cero
   imports de framework) sin necesitar carpetas `ports/`/`adapters/` formales — solo
   hay un adapter real (Vue+Pinia; Capacitor no cuenta como uno distinto). Formalizarlo
-  sería papeleo sin beneficio a esta escala.
+  sería papeleo sin beneficio a esta escala. *(Actualización: el guardado de partidas
+  sí se convirtió en un puerto real más adelante — ver más abajo, "Puerto de
+  persistencia". No cambia el rechazo del resto: sigue siendo la única excepción.)*
 - **DDD**: es un dominio pequeño y cohesionado, no varios "bounded contexts" — se
   mantiene el lenguaje ubicuo (`Suspect`, `Room`, `ClueRule`...) que ya existía, sin
   agregados/repositorios/domain events formales.
@@ -67,6 +69,26 @@ lo soporta. Cuando se aborde:
   `gen-sprites.mjs`) no cubre esto.
 - Por sensatez, cada pieza debería quedarse dentro de una sola sala salvo que se
   quiera deliberadamente que cruce un límite de sala.
+
+## Puerto de persistencia: IndexedDB, no SQLite — la excepción a Hexagonal, activada
+
+El usuario pidió guardar/retomar partidas (casos generados a medias o resueltos) y
+propuso SQLite + arquitectura hexagonal "para no acoplarnos a una sola capa de
+persistencia". Se rechazó SQLite específicamente, se aceptó el puerto:
+
+- **SQLite descartado**: lo que hay que persistir es una lista de registros sin
+  ninguna consulta relacional — el caso de uso nativo de IndexedDB (integrado en el
+  navegador, cero coste de bundle). SQLite en web implica WASM (1-2MB+), o un plugin
+  nativo de Capacitor que no funciona en el navegador — la vía principal de prueba de
+  esta app — obligando a mantener dos implementaciones para una necesidad inexistente.
+- **Puerto `GameRepository` aceptado**: no es una reversión del rechazo de Hexagonal
+  de arriba — es exactamente la excepción que ya se había anticipado en ese mismo
+  debate ("el único sitio donde sí le veo valor futuro es el guardado de progreso...
+  ahí un puerto de repositorio pagaría su precio"). Un puerto, un único adapter
+  concreto (IndexedDB), sin ceremonia adicional.
+- Detalle completo, incluyendo por qué no se guarda el `Puzzle` completo (se
+  reconstruye por semilla) y el bug de `DataCloneError` encontrado al construirlo: ver
+  [`persistence.md`](./persistence.md).
 
 ## Reskin visual: pixel-art propio en vez de un pack de terceros
 

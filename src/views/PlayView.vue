@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPuzzle } from '../data/puzzles'
 import { usePuzzleStore } from '../stores/puzzleStore'
 import BoardGrid from '../components/BoardGrid.vue'
 import SuspectCard from '../components/SuspectCard.vue'
@@ -23,14 +22,13 @@ const elapsedLabel = computed(() => {
   return `${m}:${s.toString().padStart(2, '0')}`
 })
 
-function loadFromRoute() {
+async function loadFromRoute() {
   const id = route.params.id as string
-  const puzzle = getPuzzle(id)
-  if (!puzzle) {
+  const ok = await store.load(id)
+  if (!ok) {
     router.replace('/')
     return
   }
-  store.load(puzzle)
   nowMs.value = Date.now()
 }
 
@@ -72,6 +70,9 @@ watch(() => route.params.id, loadFromRoute)
     </div>
 
     <WinModal />
+  </main>
+  <main v-else class="min-h-dvh flex items-center justify-center text-[#7a6f5c] text-sm">
+    Cargando…
   </main>
 </template>
 

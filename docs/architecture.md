@@ -7,12 +7,13 @@ empaquetado nativo (Android añadido, iOS no).
 ## Capas
 
 ```
-types/          → contrato de datos (no depende de nada)
-lib/            → lógica de dominio pura (solo depende de types/, cero Vue/Pinia)
-data/puzzles/   → contenido: instancias de Puzzle, hechas a mano o generadas
-stores/         → estado de sesión de partida (Pinia), delega reglas a lib/
-views/, components/ → UI "tonta": lee del store, no reimplementa reglas
-scripts/        → herramientas de desarrollo offline (verificación, generación de assets)
+types/                → contrato de datos (no depende de nada)
+lib/                   → lógica de dominio pura (solo depende de types/, cero Vue/Pinia)
+lib/persistence/        → puerto GameRepository + adapter IndexedDB (ver persistence.md)
+data/puzzles/             → contenido: casos hechos a mano + resolvePuzzle(id) (hecho a mano o regenerado por semilla)
+stores/                     → estado de sesión de partida (Pinia), delega reglas a lib/ y guardado a lib/persistence/
+views/, components/          → UI "tonta": lee del store, no reimplementa reglas
+scripts/                      → herramientas de desarrollo offline (verificación, generación de assets)
 ```
 
 La dirección de dependencia es estricta: cada capa solo conoce la de abajo. Nunca hay
@@ -63,13 +64,19 @@ hubiera):
   para que cada sospechoso tenga un color propio y consistente entre el tablero y las
   tarjetas, sin necesitar N sprites distintos.
 - **`generator/`** — el generador procedural completo, ver el documento dedicado.
+- **`persistence/`** — puerto `GameRepository` + adapter IndexedDB. Sigue siendo
+  dominio puro (IndexedDB es una API de plataforma, no un framework) — ver
+  [`persistence.md`](./persistence.md).
 
 ## Estado (`src/stores/puzzleStore.ts`)
 
 Un único store Pinia con el estado de la partida *actual*: colocaciones, sospechoso
-seleccionado, historial de deshacer, pistas usadas, si se ha ganado, IDs de casos
-completados (persistidos en `localStorage`). Las acciones llaman a las funciones puras
-de `gridLogic.ts` para detectar conflictos/victoria en vez de reimplementar esa lógica.
+seleccionado, historial de deshacer, pistas usadas, si se ha ganado. `load(id)` (async)
+resuelve el `Puzzle` vía `resolvePuzzle` y restaura el progreso guardado si existe;
+`persist()` autoguarda tras cada acción que muta el tablero, vía el
+`gameRepository` de `lib/persistence/` — ver [`persistence.md`](./persistence.md) para
+el ciclo de vida completo. Las acciones llaman a las funciones puras de `gridLogic.ts`
+para detectar conflictos/victoria en vez de reimplementar esa lógica.
 
 ## UI (`src/views/`, `src/components/`)
 
@@ -84,8 +91,8 @@ delegan cualquier decisión de reglas a `lib/`. Ninguno reimplementa lógica de 
 
 ## Enrutado
 
-Dos rutas (`src/router/index.ts`): `/` (lista de casos) y `/play/:id`. Los casos
-generados procedimentalmente no viven en el registro estático de
-`src/data/puzzles/index.ts` — se registran en un `Map` transitorio en memoria
-(`registerGeneratedPuzzle`) justo antes de navegar a jugarlos, y se pierden al recargar
-la página (intencional: regenerar uno nuevo es gratis).
+Dos rutas (`src/router/index.ts`): `/` (tus partidas guardadas) y `/play/:id`. Un caso
+generado procedimentalmente no vive en ningún registro estático — `resolvePuzzle(id)`
+(`src/data/puzzles/index.ts`) lo reconstruye bajo demanda desde su `{ seed, difficulty }`
+guardado (`lib/persistence/`), así que sobrevive a recargar la página o cerrar la app.
+Ver [`persistence.md`](./persistence.md).

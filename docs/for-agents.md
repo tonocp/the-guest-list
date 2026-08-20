@@ -9,8 +9,8 @@ explicación completa.
 Vue 3 + TypeScript + Vite + Pinia. Juego de lógica "misterio de asesinato + sudoku":
 colocar sospechosos en una cuadrícula (una fila, una columna cada uno) siguiendo
 pistas de texto, hasta deducir quién compartía sala con la víctima. PWA offline +
-Capacitor (Android). Sin backend — todo el estado vive en el cliente
-(`localStorage` solo para IDs de casos completados).
+Capacitor (Android). Sin backend — todo el estado vive en el cliente (IndexedDB para
+las partidas guardadas, ver [`persistence.md`](./persistence.md)).
 
 ## Invariantes que hay que conocer antes de tocar la lógica del juego
 
@@ -36,8 +36,9 @@ src/lib/gridLogic.ts         reglas puras: isNextTo, getConflicts, getMurderer..
 src/lib/solver.ts            backtracking + MRV + poda; countSolutions/hasUniqueSolution
 src/lib/rng.ts               PRNG determinista (mulberry32) — usar SIEMPRE esto en el generador, nunca Math.random()
 src/lib/generator/           generador procedural completo (ver procedural-generator.md)
-src/data/puzzles/            casos hechos a mano + registro (getPuzzle, registerGeneratedPuzzle)
-src/stores/puzzleStore.ts    estado de partida (Pinia), delega reglas a gridLogic.ts
+src/lib/persistence/         puerto GameRepository + adapter IndexedDB (ver persistence.md)
+src/data/puzzles/            casos hechos a mano + resolvePuzzle(id) (regenera casos guardados desde su semilla)
+src/stores/puzzleStore.ts    estado de partida (Pinia), load(id) async + autoguardado, delega reglas a gridLogic.ts
 src/views/, src/components/  UI — no reimplementan reglas, solo leen del store
 scripts/verify-puzzle.ts     verifica unicidad de los casos hechos a mano (usa solver.ts)
 scripts/stress-generate.ts   30 semillas × 5 dificultades, tasa de éxito + tiempos del generador
@@ -66,6 +67,18 @@ Dirección de dependencia estricta: `types/` ← `lib/` ← `data/` ← `stores/
 - **12 tipos de mobiliario, no 8** — se ampliaron a mitad de desarrollo porque 8 no
   bastaban para anclar a los 11 sospechosos de "experto" (12x12). Si añades un caso o
   tocas el generador para un tamaño mayor, puede volver a hacer falta más margen.
+- **Nunca pases estado de Pinia directamente a `gameRepository.save(...)`** sin pasar
+  por el adapter tal cual está — IndexedDB no puede clonar un `Proxy` reactivo de Vue
+  (`DataCloneError`). Ya está resuelto dentro de `indexedDbGameRepository.ts` (aplana
+  con `JSON.parse(JSON.stringify(...))` antes de `store.put`), pero si se reintroduce
+  el error, es casi seguro esto. Ver [`persistence.md`](./persistence.md).
+- **El Service Worker de desarrollo puede servir código cacheado y viejo aunque el
+  archivo fuente ya esté arreglado** — ni una recarga normal lo nota. Si un fix no
+  parece surtir efecto en el navegador aunque el archivo servido por Vite ya lo
+  contenga, desregistra el Service Worker y limpia sus cachés
+  (`(await navigator.serviceWorker.getRegistrations()).forEach(r => r.unregister())`
+  + `caches.keys().then(ks => ks.forEach(k => caches.delete(k)))` en la consola) antes
+  de seguir depurando.
 
 ## Cómo verificar que algo sigue funcionando
 

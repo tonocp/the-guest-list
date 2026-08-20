@@ -19,6 +19,7 @@ pensado para cargar contexto rápido; el resto de documentos profundizan cada te
 | [`game-rules.md`](./game-rules.md) | Las reglas reales del juego: por qué las salas no son exclusivas, qué significa "junto a", cómo se deduce el asesino. |
 | [`architecture.md`](./architecture.md) | Capas del código, el modelo de datos (`Puzzle` como contrato único), flujo de datos UI↔dominio. |
 | [`procedural-generator.md`](./procedural-generator.md) | Cómo funciona el generador de casos: solver, generador de salas, selección de pistas — y los dos bugs reales que se encontraron construyéndolo. |
+| [`persistence.md`](./persistence.md) | Guardado/retomado de partidas: por qué IndexedDB y no SQLite, por qué no se guarda el `Puzzle` completo, y la trampa de `DataCloneError` con estado reactivo de Pinia. |
 | [`testing-and-tooling.md`](./testing-and-tooling.md) | Cómo correr tests y scripts, y qué comprueba cada uno. |
 | [`pwa-mobile-capacitor.md`](./pwa-mobile-capacitor.md) | PWA offline, HTTPS local para probar en el móvil (con la trampa de `mkcert`), Capacitor/Android. |
 | [`visual-design.md`](./visual-design.md) | El sistema de sprites pixel-art generados por código, y por qué no se usó un pack de terceros. |
@@ -26,10 +27,12 @@ pensado para cargar contexto rápido; el resto de documentos profundizan cada te
 
 ## Estado a fecha de este commit
 
-- 2 casos hechos a mano (`src/data/puzzles/`): "La Fiesta de Disfraces" (5x5, muy
-  fácil) y "El Estudio de Yoga" (6x6, fácil).
-- Generador procedural funcional para las 5 dificultades (6x6 hasta 12x12), con UI de
-  generación en la lista de casos.
+- La pantalla de inicio muestra **tus partidas guardadas** (generadas por ti, en
+  progreso o resueltas), no una lista fija de casos de ejemplo.
+- 2 casos hechos a mano (`src/data/puzzles/`) siguen existiendo como fixtures de
+  tests, pero ya no se listan en la pantalla de inicio.
+- Generador procedural funcional para las 5 dificultades (6x6 hasta 12x12), con
+  autoguardado en cada jugada (IndexedDB) — ver [`persistence.md`](./persistence.md).
 - 44 tests (`npx vitest run`), todos en verde.
 - PWA instalable y funcional offline (`npm run build && npm run preview`, o
   `npm run dev -- --host` para probar en el móvil por la red local).

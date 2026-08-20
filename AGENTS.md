@@ -16,6 +16,8 @@ Resto de la documentación, según lo que vayas a tocar:
 - [`docs/architecture.md`](./docs/architecture.md) — capas, `Puzzle` como contrato único
 - [`docs/procedural-generator.md`](./docs/procedural-generator.md) — pipeline del
   generador y los bugs reales encontrados construyéndolo
+- [`docs/persistence.md`](./docs/persistence.md) — guardado/retomado de partidas
+  (IndexedDB), por qué no se guarda el `Puzzle` completo
 - [`docs/decisions.md`](./docs/decisions.md) — qué se descartó explícitamente y por qué
 - [`docs/testing-and-tooling.md`](./docs/testing-and-tooling.md) — tests y scripts
 - [`docs/pwa-mobile-capacitor.md`](./docs/pwa-mobile-capacitor.md) — PWA/offline/móvil
@@ -42,6 +44,10 @@ Resto de la documentación, según lo que vayas a tocar:
   [`docs/decisions.md`](./docs/decisions.md). Mantén el principio de fondo (dominio
   puro y testable, cobertura de tests real, componentes organizados con sentido) sin
   la ceremonia formal, salvo que el usuario reabra la discusión explícitamente.
+  **Excepción ya realizada**: `src/lib/persistence/` (`GameRepository`) es un puerto
+  con un único adapter (IndexedDB) — era la excepción que ya se había anticipado en
+  `docs/decisions.md` para el guardado de partidas. No la uses como precedente para
+  meter puertos/adapters en ningún otro sitio de la app sin el mismo debate explícito.
 
 ## Prácticas de código
 
