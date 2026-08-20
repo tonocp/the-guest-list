@@ -1,9 +1,11 @@
-# MurDoku — documentación
+# The Guest List — documentación
 
-MurDoku es un juego de lógica tipo "misterio de asesinato + sudoku": coloca a cada
+The Guest List es un juego de lógica tipo "misterio de asesinato": coloca a cada
 sospechoso en una cuadrícula siguiendo pistas de texto, hasta deducir quién compartía
 sala con la víctima. App Vue 3 + TypeScript, empaquetada como PWA instalable y offline,
-con Capacitor para envoltorio nativo (Android).
+con Capacitor para envoltorio nativo (Android). El diseño del tablero está inspirado en
+el juego [Murdoku](https://murdoku.com/), de Manuel Garand — ver
+[`decisions.md`](./decisions.md) para el porqué del nombre y el cambio de marca.
 
 Esta carpeta documenta tanto el **qué** (reglas, arquitectura, cómo correr cosas) como
 el **por qué** (decisiones tomadas, alternativas descartadas y por qué, bugs reales

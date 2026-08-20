@@ -12,6 +12,31 @@ qué, para no volver a proponerlo sin motivo ni repetir el mismo debate.
   paso de decisiones de arquitectura — no asumir que "sí" es la respuesta esperada;
   cuestionar con preguntas concretas y dar una recomendación razonada, no solo opciones.
 
+## Renombrado de MurDoku a The Guest List (riesgo de marca)
+
+El proyecto se llamó "MurDoku" hasta que se investigó el nombre antes de plantear
+publicarlo en un portfolio: "Murdoku" no es solo la web de referencia que inspiró la
+mecánica — es una serie de libros de puzzles de Manuel Garand (Workman/Hachette,
+bestseller de USA Today y Publishers Weekly), y hay una solicitud de marca activa en
+la USPTO (expediente 99677726, "Studios Digivoid Inc.") que cubre explícitamente
+**software de juegos de lógica** — la misma categoría de este proyecto, no un
+solapamiento tangencial.
+
+Se descartó mantener el nombre para cualquier uso público (portfolio, tiendas de
+apps). Se renombró a **"The Guest List"** — sin ningún parecido lingüístico con
+"Murdoku"/"Sudoku" (se evitó deliberadamente cualquier patrón "-doku", que es
+justo el tipo de construcción que causó el problema) ni con otras marcas del género
+detectadas de paso ("Clue"/"Cluedo" es de Hasbro, "Sherlock" tiene marca asociada).
+
+**La mecánica del juego en sí nunca fue el problema** — las reglas/sistemas no son
+propiedad intelectual protegible, solo el nombre de marca lo era. Por eso el
+`README.md` raíz incluye una mención de inspiración factual y puntual a Murdoku
+(uso nominativo/referencial, no usar su nombre en branding/SEO/marketing propios).
+
+Quedan como referencia histórica del nombre anterior: el repositorio de GitHub
+(`tonocp/MurDoku`, pendiente de renombrar por el usuario) y cualquier commit previo
+al cambio.
+
 ## Arquitectura: se rechazó Hexagonal/DDD/TDD estricto/Atomic Design formales
 
 El usuario propuso aplicar Arquitectura Hexagonal, DDD, TDD y Atomic Design "para
@@ -46,8 +71,8 @@ múltiples adapters reales), reconsiderar entonces — no antes.
 muy-fácil = 6×6, fácil/medio/difícil = 9×9, experto = 12×12. Es un mapeo simplificado
 elegido por el usuario, **no** una descripción de lo que hace la web de referencia
 (murdoku.com) en la práctica — esa mezcla tamaños dentro de cada nivel de dificultad
-(muy fácil va de 5x5 a 6x6, fácil de 6x6 a 9x9, etc.). MurDoku usa el mapeo fijo de
-arriba, ver `SIZE_BY_DIFFICULTY` en `src/lib/generator/generatePuzzle.ts`.
+(muy fácil va de 5x5 a 6x6, fácil de 6x6 a 9x9, etc.). Este proyecto usa el mapeo fijo
+de arriba, ver `SIZE_BY_DIFFICULTY` en `src/lib/generator/generatePuzzle.ts`.
 
 ## Mobiliario multi-celda: fuera de alcance de v1, pero con nota de diseño
 

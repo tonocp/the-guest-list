@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">MurDoku</string>
-    <string name="title_activity_main">MurDoku</string>
-    <string name="package_name">com.amcp88.murdoku</string>
-    <string name="custom_url_scheme">com.amcp88.murdoku</string>
+    <string name="app_name">The Guest List</string>
+    <string name="title_activity_main">The Guest List</string>
+    <string name="package_name">com.amcp88.theguestlist</string>
+    <string name="custom_url_scheme">com.amcp88.theguestlist</string>
 </resources>

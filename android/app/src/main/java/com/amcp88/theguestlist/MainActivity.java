@@ -1,4 +1,4 @@
-package com.amcp88.murdoku;
+package com.amcp88.theguestlist;
 
 import com.getcapacitor.BridgeActivity;
 

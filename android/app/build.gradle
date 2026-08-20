@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.amcp88.murdoku"
+    namespace = "com.amcp88.theguestlist"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.amcp88.murdoku"
+        applicationId "com.amcp88.theguestlist"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

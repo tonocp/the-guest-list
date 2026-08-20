@@ -1,6 +1,9 @@
 import type {GameRepository, SavedGame} from './gameRepository'
 
-const DB_NAME = 'murdoku'
+// Renaming this orphans any already-saved games in a browser (a differently-named
+// IndexedDB database is a separate store) — acceptable pre-release, not once real
+// players exist.
+const DB_NAME = 'the-guest-list'
 const DB_VERSION = 1
 const STORE_NAME = 'games'
 

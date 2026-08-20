@@ -77,7 +77,7 @@ const DIFFICULTIES: Difficulty[] = ['muy-facil', 'facil', 'medio', 'dificil', 'e
 <template>
   <main class="max-w-2xl mx-auto p-4">
     <header class="mb-6 text-center">
-      <h1 class="pixel-heading text-2xl text-[#3d3428]">🔍 MurDoku</h1>
+      <h1 class="pixel-heading text-2xl text-[#3d3428]">🔍 The Guest List</h1>
       <p class="text-sm text-[#7a6f5c] mt-2">Tus casos</p>
     </header>
 

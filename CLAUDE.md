@@ -1,3 +1,3 @@
-# Instrucciones del proyecto MurDoku
+# Instrucciones del proyecto The Guest List
 
 @AGENTS.md
