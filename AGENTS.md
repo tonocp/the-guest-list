@@ -20,7 +20,7 @@ Resto de la documentación, según lo que vayas a tocar:
   (IndexedDB), por qué no se guarda el `Puzzle` completo
 - [`docs/decisions.md`](./docs/decisions.md) — qué se descartó explícitamente y por qué
 - [`docs/testing-and-tooling.md`](./docs/testing-and-tooling.md) — tests y scripts
-- [`docs/pwa-mobile-capacitor.md`](./docs/pwa-mobile-capacitor.md) — PWA/offline/móvil
+- [`docs/pwa-mobile.md`](./docs/pwa-mobile.md) — PWA/offline/móvil
 - [`docs/visual-design.md`](./docs/visual-design.md) — sistema de sprites
 
 ## Reglas de arquitectura (no negociables sin volver a debatirlo con el usuario)
@@ -92,7 +92,7 @@ Un cambio de funcionalidad sin su documentación actualizada **no está terminad
 aunque el código funcione y los tests pasen.
 
 - Cualquier cambio que toque reglas del juego, arquitectura, el pipeline del
-  generador, tooling/tests, PWA/Capacitor o el sistema visual actualiza el documento
+  generador, tooling/tests, PWA/móvil o el sistema visual actualiza el documento
   correspondiente de `docs/` **en el mismo cambio**, no como tarea pendiente para
   después.
 - Si el cambio corrige un bug real o descubre un límite del diseño (como los tres

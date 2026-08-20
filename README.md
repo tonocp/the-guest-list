@@ -4,14 +4,14 @@ MVP de un juego de lógica estilo "misterio de asesinato": coloca a cada sospech
 la cuadrícula (una fila y una columna por persona) siguiendo sus pistas, hasta
 descubrir quién compartía sala con la víctima. Ese es el asesino.
 
-Vue 3 + TypeScript + Vite, pensado como PWA instalable y offline, con Capacitor para
-empaquetar como app nativa (Android). Incluye un generador procedural de casos además
-de los hechos a mano, con guardado de partidas en IndexedDB.
+Vue 3 + TypeScript + Vite, PWA instalable y offline — sin envoltorio nativo. Incluye
+un generador procedural de casos además de los hechos a mano, con guardado de
+partidas en IndexedDB.
 
 📖 **Documentación completa en [`docs/`](./docs/README.md)** — reglas del juego,
 arquitectura, cómo funciona el generador procedural (con los bugs reales encontrados
-al construirlo), guardado de partidas, tests/herramientas, PWA/móvil/Capacitor, y el
-sistema de sprites. Si eres un agente de IA retomando este proyecto, empieza por
+al construirlo), guardado de partidas, tests/herramientas, PWA/móvil, y el sistema de
+sprites. Si eres un agente de IA retomando este proyecto, empieza por
 [`docs/for-agents.md`](./docs/for-agents.md).
 
 ## Inspiración
@@ -29,8 +29,8 @@ npm run dev -- --host   # --host expone el servidor en tu red local, para probar
 ```
 
 La primera vez necesitas confiar en la CA de `mkcert` para servir por HTTPS local —
-ver [`docs/pwa-mobile-capacitor.md`](./docs/pwa-mobile-capacitor.md) (el comando
-correcto, y la trampa habitual con `sudo` si no lo copias tal cual).
+ver [`docs/pwa-mobile.md`](./docs/pwa-mobile.md) (el comando correcto, y la trampa
+habitual con `sudo` si no lo copias tal cual).
 
 ```bash
 npx vitest run                      # tests (44, deben pasar todos)

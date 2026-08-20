@@ -2,10 +2,10 @@
 
 The Guest List es un juego de lógica tipo "misterio de asesinato": coloca a cada
 sospechoso en una cuadrícula siguiendo pistas de texto, hasta deducir quién compartía
-sala con la víctima. App Vue 3 + TypeScript, empaquetada como PWA instalable y offline,
-con Capacitor para envoltorio nativo (Android). El diseño del tablero está inspirado en
-el juego [Murdoku](https://murdoku.com/), de Manuel Garand — ver
-[`decisions.md`](./decisions.md) para el porqué del nombre y el cambio de marca.
+sala con la víctima. App Vue 3 + TypeScript, empaquetada como PWA instalable y
+offline. El diseño del tablero está inspirado en el juego
+[Murdoku](https://murdoku.com/), de Manuel Garand — [`decisions.md`](./decisions.md)
+tiene el porqué del nombre y el cambio de marca.
 
 Esta carpeta documenta tanto el **qué** (reglas, arquitectura, cómo correr cosas) como
 el **por qué** (decisiones tomadas, alternativas descartadas y por qué, bugs reales
@@ -23,7 +23,7 @@ pensado para cargar contexto rápido; el resto de documentos profundizan cada te
 | [`procedural-generator.md`](./procedural-generator.md) | Cómo funciona el generador de casos: solver, generador de salas, selección de pistas — y los dos bugs reales que se encontraron construyéndolo. |
 | [`persistence.md`](./persistence.md) | Guardado/retomado de partidas: por qué IndexedDB y no SQLite, por qué no se guarda el `Puzzle` completo, y la trampa de `DataCloneError` con estado reactivo de Pinia. |
 | [`testing-and-tooling.md`](./testing-and-tooling.md) | Cómo correr tests y scripts, y qué comprueba cada uno. |
-| [`pwa-mobile-capacitor.md`](./pwa-mobile-capacitor.md) | PWA offline, HTTPS local para probar en el móvil (con la trampa de `mkcert`), Capacitor/Android. |
+| [`pwa-mobile.md`](./pwa-mobile.md) | PWA offline, HTTPS local para probar en el móvil (con la trampa de `mkcert`). |
 | [`visual-design.md`](./visual-design.md) | El sistema de sprites pixel-art generados por código, y por qué no se usó un pack de terceros. |
 | [`decisions.md`](./decisions.md) | Registro de decisiones: qué se descartó (Hexagonal/DDD/Atomic Design formales) y por qué, mapeo dificultad→tamaño, reglas de colaboración con el usuario. |
 

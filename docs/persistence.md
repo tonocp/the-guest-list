@@ -9,10 +9,8 @@ pantalla — siguen existiendo solo como fixtures de `solver.test.ts`.
 
 Lo que hay que persistir es una lista de registros sin ninguna consulta relacional —
 el caso de uso nativo de IndexedDB, integrado en cualquier navegador sin coste de
-bundle. SQLite en web implicaría compilarlo a WASM (1-2MB+ añadidos), o un plugin
-nativo de Capacitor que **no funcionaría en el navegador** — la vía principal de
-prueba de esta app (PWA en el móvil) — obligando a mantener dos implementaciones para
-una necesidad que hoy no existe. Ver [`decisions.md`](./decisions.md).
+bundle. SQLite en web implicaría compilarlo a WASM (1-2MB+ añadidos) para una
+necesidad que hoy no existe.
 
 ## Por qué no se guarda el `Puzzle` completo
 

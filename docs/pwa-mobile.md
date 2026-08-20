@@ -60,19 +60,3 @@ arriba tal cual, con el `env CAROOT=...` incluido.
    móvil (solo lo es en el Mac donde se generó) — acepta el aviso para seguir.
 4. Menú del navegador → "Añadir a pantalla de inicio" / "Instalar app" para probarla
    como PWA instalada, y comprobar que sigue funcionando en modo avión.
-
-## Capacitor (envoltorio nativo)
-
-Ya inicializado con la plataforma Android (`android/`, `capacitor.config.ts`).
-
-```bash
-npm run build
-npx cap sync android
-npx cap open android   # abre Android Studio
-```
-
-Compilar/ejecutar desde Android Studio requiere el SDK configurado (`ANDROID_HOME`) —
-Android Studio estaba instalado pero el SDK no configurado en el entorno de
-desarrollo original; el `npx cap add android` en sí no lo necesitó, solo hace falta
-para el build final del APK. iOS (`npx cap add ios`) no se ha añadido, aunque el Mac
-de desarrollo tiene Xcode instalado y sería viable.

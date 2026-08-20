@@ -46,7 +46,7 @@ la ceremonia:
 
 - **Hexagonal**: el proyecto ya tiene la sustancia (dominio puro en `src/lib/`, cero
   imports de framework) sin necesitar carpetas `ports/`/`adapters/` formales — solo
-  hay un adapter real (Vue+Pinia; Capacitor no cuenta como uno distinto). Formalizarlo
+  hay un adapter real (Vue+Pinia). Formalizarlo
   sería papeleo sin beneficio a esta escala. *(Actualización: el guardado de partidas
   sí se convirtió en un puerto real más adelante — ver más abajo, "Puerto de
   persistencia". No cambia el rechazo del resto: sigue siendo la única excepción.)*
@@ -103,9 +103,8 @@ persistencia". Se rechazó SQLite específicamente, se aceptó el puerto:
 
 - **SQLite descartado**: lo que hay que persistir es una lista de registros sin
   ninguna consulta relacional — el caso de uso nativo de IndexedDB (integrado en el
-  navegador, cero coste de bundle). SQLite en web implica WASM (1-2MB+), o un plugin
-  nativo de Capacitor que no funciona en el navegador — la vía principal de prueba de
-  esta app — obligando a mantener dos implementaciones para una necesidad inexistente.
+  navegador, cero coste de bundle). SQLite en web implica compilarlo a WASM (1-2MB+
+  añadidos) para una necesidad que no existe.
 - **Puerto `GameRepository` aceptado**: no es una reversión del rechazo de Hexagonal
   de arriba — es exactamente la excepción que ya se había anticipado en ese mismo
   debate ("el único sitio donde sí le veo valor futuro es el guardado de progreso...

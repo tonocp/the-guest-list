@@ -8,9 +8,9 @@ explicación completa.
 
 Vue 3 + TypeScript + Vite + Pinia. Juego de lógica "misterio de asesinato + sudoku":
 colocar sospechosos en una cuadrícula (una fila, una columna cada uno) siguiendo
-pistas de texto, hasta deducir quién compartía sala con la víctima. PWA offline +
-Capacitor (Android). Sin backend — todo el estado vive en el cliente (IndexedDB para
-las partidas guardadas, ver [`persistence.md`](./persistence.md)).
+pistas de texto, hasta deducir quién compartía sala con la víctima. PWA instalable y
+offline. Sin backend — todo el estado vive en el cliente (IndexedDB para las
+partidas guardadas, ver [`persistence.md`](./persistence.md)).
 
 ## Invariantes que hay que conocer antes de tocar la lógica del juego
 
@@ -62,7 +62,7 @@ Dirección de dependencia estricta: `types/` ← `lib/` ← `data/` ← `stores/
 - **`aspect-square` por celda en el tablero causaba huecos visuales** — corregido
   moviendo `aspect-ratio` al contenedor del grid. Ver `visual-design.md` si reaparece.
 - **`sudo mkcert -install` sin `env CAROOT=...` instala la CA en el sitio
-  equivocado** (sudo resetea `$HOME`). Ver `pwa-mobile-capacitor.md` para el comando
+  equivocado** (sudo resetea `$HOME`). Ver `pwa-mobile.md` para el comando
   correcto — no es negociable, es el único que funciona.
 - **12 tipos de mobiliario, no 8** — se ampliaron a mitad de desarrollo porque 8 no
   bastaban para anclar a los 11 sospechosos de "experto" (12x12). Si añades un caso o

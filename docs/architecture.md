@@ -1,8 +1,7 @@
 # Arquitectura
 
 Stack: Vue 3 (`<script setup>`, Composition API) + TypeScript + Vite + Pinia +
-vue-router + Tailwind v4. PWA vía `vite-plugin-pwa` (Workbox). Capacitor para
-empaquetado nativo (Android añadido, iOS no).
+vue-router + Tailwind v4. PWA instalable y offline vía `vite-plugin-pwa` (Workbox).
 
 ## Capas
 
