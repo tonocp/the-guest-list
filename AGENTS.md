@@ -15,13 +15,15 @@ Resto de la documentación, según lo que vayas a tocar:
 - [`docs/game-rules.md`](./docs/game-rules.md) — mecánica del juego
 - [`docs/architecture.md`](./docs/architecture.md) — capas, `Puzzle` como contrato único
 - [`docs/procedural-generator.md`](./docs/procedural-generator.md) — pipeline del
-  generador y los bugs reales encontrados construyéndolo
+  generador de casos
 - [`docs/persistence.md`](./docs/persistence.md) — guardado/retomado de partidas
   (IndexedDB), por qué no se guarda el `Puzzle` completo
-- [`docs/decisions.md`](./docs/decisions.md) — qué se descartó explícitamente y por qué
 - [`docs/testing-and-tooling.md`](./docs/testing-and-tooling.md) — tests y scripts
 - [`docs/pwa-mobile.md`](./docs/pwa-mobile.md) — PWA/offline/móvil
 - [`docs/visual-design.md`](./docs/visual-design.md) — sistema de sprites
+
+No se documenta nada sobre infraestructura de despliegue (dónde ni cómo se hostea) —
+el repo es público, esa información no vive aquí.
 
 ## Reglas de arquitectura (no negociables sin volver a debatirlo con el usuario)
 
@@ -40,14 +42,14 @@ Resto de la documentación, según lo que vayas a tocar:
 - **No apliques Arquitectura Hexagonal formal (carpetas `ports/`/`adapters/`), DDD
   táctico (agregados, repositorios, domain events), TDD estricto con orden
   test-primero dogmático, ni Atomic Design (taxonomía de componentes atoms/molecules/
-  organisms).** Esto se debatió explícitamente con el usuario y se rechazó — ver
-  [`docs/decisions.md`](./docs/decisions.md). Mantén el principio de fondo (dominio
-  puro y testable, cobertura de tests real, componentes organizados con sentido) sin
-  la ceremonia formal, salvo que el usuario reabra la discusión explícitamente.
+  organisms).** Esto se debatió explícitamente con el usuario y se rechazó por ser
+  ceremonia sin beneficio a esta escala. Mantén el principio de fondo (dominio puro y
+  testable, cobertura de tests real, componentes organizados con sentido) sin la
+  ceremonia formal, salvo que el usuario reabra la discusión explícitamente.
   **Excepción ya realizada**: `src/lib/persistence/` (`GameRepository`) es un puerto
-  con un único adapter (IndexedDB) — era la excepción que ya se había anticipado en
-  `docs/decisions.md` para el guardado de partidas. No la uses como precedente para
-  meter puertos/adapters en ningún otro sitio de la app sin el mismo debate explícito.
+  con un único adapter (IndexedDB), para el guardado de partidas. No la uses como
+  precedente para meter puertos/adapters en ningún otro sitio de la app sin el mismo
+  debate explícito.
 
 ## Prácticas de código
 
@@ -82,9 +84,9 @@ Resto de la documentación, según lo que vayas a tocar:
   aplica "en todos los pasos", no es una petición de una sola vez — trátalo como
   comportamiento estándar en este proyecto.
 - Cuando una decisión de diseño en este código parezca arbitraria, probablemente no lo
-  sea — revisa `docs/decisions.md` y `docs/procedural-generator.md` antes de asumir
-  que se puede simplificar; varias simplificaciones "obvias" ya se probaron y fallaron
-  (documentado ahí, con los números que lo confirman).
+  sea — revisa `docs/procedural-generator.md` antes de asumir que se puede
+  simplificar; varias simplificaciones "obvias" (pistas binarias en casos generados,
+  búsqueda sin cinturón de seguridad) ya se probaron y fallaron.
 
 ## Mantener la documentación al día
 
@@ -95,13 +97,15 @@ aunque el código funcione y los tests pasen.
   generador, tooling/tests, PWA/móvil o el sistema visual actualiza el documento
   correspondiente de `docs/` **en el mismo cambio**, no como tarea pendiente para
   después.
-- Si el cambio corrige un bug real o descubre un límite del diseño (como los tres
-  casos ya documentados en `procedural-generator.md`), documenta el hallazgo con el
-  mismo nivel de detalle: qué falló, por qué, y la corrección — no lo resumas a
-  "arreglado". Ese detalle es lo que evita que alguien reintroduzca el mismo bug.
-- Si el cambio revierte o reemplaza una decisión ya registrada en
-  [`docs/decisions.md`](./docs/decisions.md), actualiza esa entrada dejando constancia
-  de qué cambió y por qué, en vez de borrarla o dejarla contradiciendo el código.
+- El repo es público y `docs/` es documentación de producto/arquitectura, no un diario
+  de debate interno: cuando un cambio corrija un bug o revierta una decisión previa,
+  actualiza el documento afectado para que refleje el estado y el motivo actuales en
+  una o dos frases — sin narrar el proceso de depuración ni cifras de benchmarks
+  concretas, salvo que sea una invariante que de verdad haga falta conocer para no
+  reintroducir el mismo bug (ver "Trampas conocidas" en `docs/for-agents.md` como
+  referencia de nivel de detalle apropiado).
+- No documentes nada sobre infraestructura de despliegue (proveedor, dominio,
+  configuración de hosting) en ningún archivo del repo — el repo es público.
 - Si el cambio añade, quita o mueve un archivo/patrón relevante, actualiza el "Mapa de
   archivos" y las "Trampas conocidas" de [`docs/for-agents.md`](./docs/for-agents.md)
   para que sigan siendo precisos.
