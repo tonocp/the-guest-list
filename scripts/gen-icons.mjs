@@ -1,7 +1,10 @@
 import sharp from 'sharp'
 import { mkdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 
-const outDir = '/Users/tonocp/DEV/PERSONAL/MurDoku/public/icons'
+// Relative to this script, not the project folder's name — survives a repo rename.
+const outDir = resolve(dirname(fileURLToPath(import.meta.url)), '../public/icons')
 mkdirSync(outDir, { recursive: true })
 
 // Base icon: dark navy square, pastel 3x3 grid, gold magnifying glass.

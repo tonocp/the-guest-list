@@ -1,7 +1,10 @@
 import sharp from 'sharp'
 import { mkdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 
-const OUT_DIR = '/Users/tonocp/DEV/PERSONAL/MurDoku/public/sprites'
+// Relative to this script, not the project folder's name — survives a repo rename.
+const OUT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../public/sprites')
 mkdirSync(OUT_DIR, { recursive: true })
 
 const SIZE = 16

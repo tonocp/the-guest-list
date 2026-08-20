@@ -14,9 +14,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
-        name: 'MurDoku',
-        short_name: 'MurDoku',
-        description: 'Un misterio de asesinato con lógica tipo sudoku.',
+        name: 'The Guest List',
+        short_name: 'Guest List',
+        description: 'Un misterio de asesinato con lógica de cuadrícula.',
         theme_color: '#1f2430',
         background_color: '#1f2430',
         display: 'standalone',
