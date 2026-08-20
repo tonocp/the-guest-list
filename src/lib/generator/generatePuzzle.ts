@@ -69,16 +69,17 @@ function tryGenerateOnce(size: number, rng: RNG): Attempt | null {
   const { solution, victimId } = victimSelection
 
   const nonVictimIds = suspectIds.filter((id) => id !== victimId)
-  const furnitureBySuspect = assignFurniture(nonVictimIds, rng)
+  const placements = assignFurniture(nonVictimIds, solution, roomIdByCell, size, rng)
 
   const cells: Cell[] = []
   for (let row = 0; row < size; row++) {
     for (let col = 0; col < size; col++) cells.push({ row, col, roomId: roomIdByCell[row][col] })
   }
-  for (const [suspectId, furnitureType] of furnitureBySuspect) {
-    const pos = solution[suspectId]
-    const idx = pos.row * size + pos.col
-    cells[idx] = { ...cells[idx], furniture: furnitureType }
+  for (const placement of placements) {
+    for (const pos of placement.cells) {
+      const idx = pos.row * size + pos.col
+      cells[idx] = { ...cells[idx], furniture: placement.type }
+    }
   }
 
   const facts = enumerateFacts(cells, solution, suspectIds, victimId)

@@ -61,8 +61,11 @@ tenga **exactamente 2** ocupantes — necesario para que el asesino quede bien d
 
 ## Mobiliario y pistas
 
-Hasta una instancia única de cada tipo de mobiliario (12 tipos), colocada en la celda
-de un sospechoso no-víctima distinto cada vez. Cada sospechoso muestra como mucho una
+Hasta una instancia única de cada tipo de mobiliario (12 tipos), anclada en la celda
+de un sospechoso no-víctima distinto cada vez. `rug` y `sofa` pueden extenderse 1-2
+celdas más allá de su ancla dentro de la misma sala (`rug` en línea recta, `sofa` en
+forma de L/esquina, con caída a recta y luego a 1 celda si no cabe) — el resto de
+tipos siguen ocupando exactamente 1 celda. Cada sospechoso muestra como mucho una
 pista (`Suspect.clue` es un único string): se le da su hecho unario más fuerte
 disponible (`on-furniture` > `room` > `near-furniture`), y luego se minimiza el
 conjunto quitando reglas mientras la solución siga siendo única.
@@ -71,8 +74,8 @@ conjunto quitando reglas mientras la solución siga siendo única.
 
 - Los casos generados solo usan pistas de sala/mobiliario — nunca `direction` o
   `adjacent` (los casos hechos a mano sí las usan, con más variedad narrativa).
-- El mobiliario ocupa una sola celda; piezas multi-celda (alfombras, sofás en L) no
-  están soportadas todavía.
+- Solo `rug`/`sofa` ocupan más de una celda; el resto sigue anclado a 1 celda. Ampliar
+  esto a más tipos, o a formas más variadas, es trabajo futuro.
 - El solver garantiza unicidad matemática de la solución, no que sea resoluble sin
   tanteo en algún punto.
 

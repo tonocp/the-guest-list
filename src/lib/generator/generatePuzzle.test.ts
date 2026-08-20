@@ -45,13 +45,36 @@ describe('generatePuzzle', () => {
         const placements = Object.fromEntries(puzzle.suspects.map((s) => [s.id, puzzle.solution[s.id]]))
         expect(getConflicts(puzzle, placements)).toEqual([])
 
-        // each furniture type used at most once
+        // furniture footprints: rug up to 2 cells, sofa up to 3, everything else exactly 1
         const furnitureCounts = new Map<string, number>()
         for (const cell of puzzle.cells) {
           if (!cell.furniture) continue
           furnitureCounts.set(cell.furniture, (furnitureCounts.get(cell.furniture) ?? 0) + 1)
         }
-        for (const [, count] of furnitureCounts) expect(count).toBe(1)
+        const MAX_FOOTPRINT: Partial<Record<string, number>> = { rug: 2, sofa: 3 }
+        for (const [type, count] of furnitureCounts) {
+          expect(count).toBeGreaterThanOrEqual(1)
+          expect(count).toBeLessThanOrEqual(MAX_FOOTPRINT[type] ?? 1)
+        }
+
+        // every furniture footprint stays within a single room
+        const roomIdsByFurnitureType = new Map<string, Set<string>>()
+        for (const cell of puzzle.cells) {
+          if (!cell.furniture) continue
+          if (!roomIdsByFurnitureType.has(cell.furniture)) roomIdsByFurnitureType.set(cell.furniture, new Set())
+          roomIdsByFurnitureType.get(cell.furniture)!.add(cell.roomId)
+        }
+        for (const [, roomIds] of roomIdsByFurnitureType) expect(roomIds.size).toBe(1)
+
+        // at most one cell per furniture type may be a suspect's own solution cell (the anchor)
+        const solutionCellKeys = new Set(
+          puzzle.suspects.map((s) => `${puzzle.solution[s.id].row}-${puzzle.solution[s.id].col}`),
+        )
+        for (const [type] of furnitureCounts) {
+          const sameTypeCells = puzzle.cells.filter((c) => c.furniture === type)
+          const onSuspectCells = sameTypeCells.filter((c) => solutionCellKeys.has(`${c.row}-${c.col}`))
+          expect(onSuspectCells.length).toBe(1)
+        }
 
         // the solver independently confirms uniqueness and agrees with the stored solution
         const solverInput = {
