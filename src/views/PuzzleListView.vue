@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import type { Difficulty } from '../types/puzzle'
 import { generatePuzzle } from '../lib/generator/generatePuzzle'
 import { gameRepository, type SavedGame } from '../lib/persistence'
+import HelpModal from '../components/HelpModal.vue'
 
 const router = useRouter()
 
@@ -11,6 +12,7 @@ const games = ref<SavedGame[]>([])
 const loading = ref(true)
 const generating = ref<Difficulty | null>(null)
 const generateError = ref(false)
+const helpOpen = ref(false)
 
 async function refresh() {
   const list = await gameRepository.list()
@@ -78,7 +80,12 @@ const DIFFICULTIES: Difficulty[] = ['muy-facil', 'facil', 'medio', 'dificil', 'e
   <main class="max-w-2xl mx-auto p-4">
     <header class="mb-6 text-center">
       <h1 class="pixel-heading text-2xl text-[#3d3428]">🔍 The Guest List</h1>
-      <p class="text-sm text-[#7a6f5c] mt-2">Tus casos</p>
+      <p class="text-sm text-[#7a6f5c] mt-2">
+        Tus casos ·
+        <button type="button" class="underline underline-offset-2" @click="helpOpen = true">
+          ¿Cómo se juega?
+        </button>
+      </p>
     </header>
 
     <p v-if="!loading && games.length === 0" class="text-center text-sm text-[#7a6f5c] py-6">
@@ -132,5 +139,7 @@ const DIFFICULTIES: Difficulty[] = ['muy-facil', 'facil', 'medio', 'dificil', 'e
         No se pudo generar el caso, inténtalo de nuevo.
       </p>
     </section>
+
+    <HelpModal :open="helpOpen" @close="helpOpen = false" />
   </main>
 </template>
