@@ -1,10 +1,11 @@
 import sharp from 'sharp'
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
 // Relative to this script, not the project folder's name — survives a repo rename.
-const outDir = resolve(dirname(fileURLToPath(import.meta.url)), '../public/icons')
+const publicDir = resolve(dirname(fileURLToPath(import.meta.url)), '../public')
+const outDir = resolve(publicDir, 'icons')
 mkdirSync(outDir, { recursive: true })
 
 // Base icon: dark navy square, pastel 3x3 grid, gold magnifying glass.
@@ -57,3 +58,44 @@ for (const t of targets) {
 const appleSvg = iconSvg(180, { padding: 0 })
 await sharp(Buffer.from(appleSvg)).png().toFile(`${outDir}/apple-touch-icon.png`)
 console.log('wrote apple-touch-icon.png')
+
+/** Favicon: a *simplified* variant of the same mark (dark navy, gold magnifying
+ * glass, pastel grid), not just iconSvg() at a small size. Measured at real
+ * rendered size (16px, the worst case — browser tabs, not just the 192-512px
+ * app/home-screen icons above): the 3x3 grid + thin ring from iconSvg() turns into
+ * unreadable plaid with a barely-visible circle. A 2x2 grid (bigger cells, fewer of
+ * them) and a much thicker ring/handle stays legible from 16px up. */
+function faviconSvg(size) {
+  const s = size
+  const half = s / 2
+  const gridColors = ['#dbe7f7', '#f3ddef', '#f3ddef', '#dbe7f7']
+  const cx = s * 0.44
+  const cy = s * 0.44
+  const r = s * 0.24
+  const hx1 = s * 0.6
+  const hy1 = s * 0.6
+  const hx2 = s * 0.84
+  const hy2 = s * 0.84
+  const cellSize = half * 0.78
+
+  let grid = ''
+  const positions = [
+    [s * 0.1, s * 0.1],
+    [half + s * 0.02, s * 0.1],
+    [s * 0.1, half + s * 0.02],
+    [half + s * 0.02, half + s * 0.02],
+  ]
+  positions.forEach(([x, y], i) => {
+    grid += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="${gridColors[i]}"/>`
+  })
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">
+  <rect width="${s}" height="${s}" rx="${s * 0.18}" fill="#1f2430"/>
+  ${grid}
+  <circle cx="${cx}" cy="${cy}" r="${r}" fill="#1f2430" stroke="#f5c542" stroke-width="${s * 0.15}"/>
+  <line x1="${hx1}" y1="${hy1}" x2="${hx2}" y2="${hy2}" stroke="#f5c542" stroke-width="${s * 0.15}" stroke-linecap="round"/>
+</svg>`
+}
+
+writeFileSync(`${publicDir}/favicon.svg`, faviconSvg(32))
+console.log('wrote favicon.svg')

@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePuzzleStore } from '../stores/puzzleStore'
-import { hueOffsetForSuspect } from '../lib/suspectTint'
+import { facePathForSuspect, VICTIM_FACE } from '../lib/suspectFace'
 
 const store = usePuzzleStore()
 const router = useRouter()
@@ -31,18 +31,12 @@ function backToList() {
       <div class="flex items-center justify-center gap-3 mt-4">
         <img
           v-if="murderer"
-          src="/sprites/token.png"
+          :src="facePathForSuspect(murderer.id, murderer.gender)"
           class="w-12 h-12 [image-rendering:pixelated]"
-          :style="{ filter: `hue-rotate(${hueOffsetForSuspect(murderer.id)}deg)` }"
           :alt="murderer.name"
         />
         <span class="text-xl text-[#7a6f5c]">→</span>
-        <img
-          v-if="victim"
-          src="/sprites/token-victim.png"
-          class="w-12 h-12 [image-rendering:pixelated]"
-          :alt="victim.name"
-        />
+        <img v-if="victim" :src="VICTIM_FACE" class="w-12 h-12 [image-rendering:pixelated]" :alt="victim.name" />
       </div>
 
       <p class="text-sm text-[#5c5342] mt-3">

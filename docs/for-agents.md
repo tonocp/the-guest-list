@@ -62,6 +62,11 @@ Dirección de dependencia estricta: `types/` ← `lib/` ← `data/` ← `stores/
   (`(await navigator.serviceWorker.getRegistrations()).forEach(r => r.unregister())`
   + `caches.keys().then(ks => ks.forEach(k => caches.delete(k)))`) antes de seguir
   depurando.
+- **El mobiliario ya NO garantiza 1 celda por tipo**: `rug`/`sofa` pueden ocupar 2-3
+  celdas (`generator/furniture.ts`, `growRug`/`growSofa`). Quien toque
+  `BoardGrid.vue` o cualquier lógica que lea `cell.furniture` no debe asumir
+  cardinalidad 1 — usar `cells.filter(c => c.furniture === type)` como ya hace
+  `solver.ts`/`clueFacts.ts`, nunca "el" `Cell` de ese tipo.
 
 ## Cómo verificar que algo sigue funcionando
 

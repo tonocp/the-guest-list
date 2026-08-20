@@ -12,6 +12,23 @@ const OUT = 128
 
 // ---- palette --------------------------------------------------------
 const DARK = hex('#2a2430')
+
+// Skin tones and hair colors for procedurally-picked suspect faces (see face() below).
+const SKIN_TONES = [
+  { skin: hex('#f2d3b0'), shadow: hex('#d9ac83') },
+  { skin: hex('#d9a875'), shadow: hex('#b8845a') },
+  { skin: hex('#a9714a'), shadow: hex('#7d5133') },
+  { skin: hex('#6b4530'), shadow: hex('#4a2f20') },
+]
+const HAIR_COLORS = [
+  { hair: hex('#3d3548'), shadow: hex('#2a2434') }, // near-black, kept a shade off DARK so the outline still reads
+  { hair: hex('#6b4226'), shadow: hex('#4a2d19') },
+  { hair: hex('#d9b64f'), shadow: hex('#b8952f') },
+  { hair: hex('#a8532c'), shadow: hex('#7d3c1f') },
+  { hair: hex('#cfc8ba'), shadow: hex('#a89e8c') },
+]
+// Counts mirrored by hand in src/lib/suspectFace.ts, same convention as
+// furnitureIcons.ts mirroring the furniture sprite list — see docs/visual-design.md.
 const TERRACOTTA = hex('#c96a3c')
 const TERRACOTTA_DK = hex('#a8532c')
 const LEAF = hex('#4a9c5e')
@@ -41,11 +58,6 @@ const CANVAS_BG = hex('#ecdcc0')
 const LAMP_SHADE = hex('#e8c15a')
 const LAMP_GLOW = hex('#fff3c9')
 const LAMP_DK = hex('#b8912f')
-const TOKEN = hex('#6c6cd9')
-const TOKEN_LT = hex('#9c9cef')
-const TOKEN_DK = hex('#4a4aa8')
-const VICTIM_FILL = hex('#f3f0e8')
-const VICTIM_RED = hex('#c9503f')
 const TABLE = hex('#9c6b3e')
 const TABLE_DK = hex('#7a4f2c')
 const TABLE_LT = hex('#c99a68')
@@ -292,23 +304,63 @@ async function vase() {
   await render(c, 'vase.png')
 }
 
-async function token() {
+/** A stylized suspect face: skin tone + hair color/style chosen by the caller (see
+ * suspectFace.ts for how those are picked deterministically per suspect), rendered on
+ * the same 16x16 pixel canvas as everything else. `closedEyes` is used for the
+ * victim's face only. */
+function face(skin, skinShadow, hair, hairShadow, style, { closedEyes = false } = {}) {
   const c = newCanvas()
-  circle(c, 7, 8, 5.6, TOKEN_DK)
-  circle(c, 7, 7.5, 5.2, TOKEN)
-  circle(c, 5.5, 5.5, 2.4, TOKEN_LT)
+  // long hair falls behind the head first, flanking it past the jawline
+  if (style === 'long') {
+    rect(c, 1, 6, 2, 13, hair)
+    rect(c, 13, 6, 14, 13, hair)
+    rect(c, 1, 6, 2, 7, hairShadow)
+    rect(c, 13, 6, 14, 7, hairShadow)
+  }
+  // head
+  circle(c, 7.5, 8.7, 6, skin)
+  rect(c, 3, 12, 12, 13, skinShadow) // chin shading
+  // hair cap
+  rect(c, 2, 2, 13, 5, hair)
+  rect(c, 3, 1, 12, 1, hair)
+  rect(c, 2, 5, 13, 5, hairShadow)
+  if (style === 'short') {
+    rect(c, 2, 6, 3, 8, hair) // side fringe
+    rect(c, 12, 6, 13, 8, hair)
+  }
+  // eyes: open = a round 2x2 dot, closed (victim only) = a thin 1-row line
+  if (closedEyes) {
+    rect(c, 4, 9, 6, 9, DARK)
+    rect(c, 9, 9, 11, 9, DARK)
+  } else {
+    rect(c, 5, 8, 6, 9, DARK)
+    rect(c, 9, 8, 10, 9, DARK)
+  }
+  // mouth
+  rect(c, 6, 12, 9, 12, skinShadow)
   outline(c, DARK)
-  await render(c, 'token.png')
+  return c
 }
 
-async function tokenVictim() {
-  const c = newCanvas()
-  circle(c, 7, 8, 5.6, hex('#c9c4b4'))
-  circle(c, 7, 7.5, 5.2, VICTIM_FILL)
-  circle(c, 5.5, 5.5, 2.4, hex('#ffffff'))
-  circle(c, 11, 4, 1.6, VICTIM_RED)
-  outline(c, DARK)
-  await render(c, 'token-victim.png')
+async function suspectFaces() {
+  for (let skinIdx = 0; skinIdx < SKIN_TONES.length; skinIdx++) {
+    for (let hairIdx = 0; hairIdx < HAIR_COLORS.length; hairIdx++) {
+      for (const style of ['short', 'long']) {
+        const { skin, shadow: skinShadow } = SKIN_TONES[skinIdx]
+        const { hair, shadow: hairShadow } = HAIR_COLORS[hairIdx]
+        const c = face(skin, skinShadow, hair, hairShadow, style)
+        await render(c, `face-${skinIdx}-${hairIdx}-${style}.png`)
+      }
+    }
+  }
+}
+
+/** The victim always renders the same face — pale skin, muted grey hair, closed eyes —
+ * so it's instantly recognizable as "the victim" regardless of which pool character it
+ * ended up being, matching how the clue text ("La víctima...") is also generic. */
+async function victimFace() {
+  const c = face(hex('#e9e2d2'), hex('#cfc6b2'), hex('#cfc8ba'), hex('#a89e8c'), 'long', { closedEyes: true })
+  await render(c, 'face-victim.png')
 }
 
 async function floorDither() {
@@ -335,6 +387,6 @@ await table()
 await mirror()
 await clock()
 await vase()
-await token()
-await tokenVictim()
+await suspectFaces()
+await victimFace()
 await floorDither()
