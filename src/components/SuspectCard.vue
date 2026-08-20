@@ -2,10 +2,14 @@
 import { computed } from 'vue'
 import type { Suspect } from '../types/puzzle'
 import { usePuzzleStore } from '../stores/puzzleStore'
-import { hueOffsetForSuspect } from '../lib/suspectTint'
+import { facePathForSuspect, VICTIM_FACE } from '../lib/suspectFace'
 
 const props = defineProps<{ suspect: Suspect }>()
 const store = usePuzzleStore()
+
+const facePath = computed(() =>
+  props.suspect.isVictim ? VICTIM_FACE : facePathForSuspect(props.suspect.id, props.suspect.gender),
+)
 
 const isSelected = computed(() => store.selectedSuspectId === props.suspect.id)
 const isPlaced = computed(() => !!store.placements[props.suspect.id])
@@ -31,12 +35,7 @@ function onClick() {
     @click="onClick"
   >
     <div class="flex items-center gap-2">
-      <img
-        :src="suspect.isVictim ? '/sprites/token-victim.png' : '/sprites/token.png'"
-        class="w-8 h-8 shrink-0 [image-rendering:pixelated]"
-        :style="{ filter: suspect.isVictim ? '' : `hue-rotate(${hueOffsetForSuspect(suspect.id)}deg)` }"
-        :alt="suspect.name"
-      />
+      <img :src="facePath" class="w-8 h-8 shrink-0 [image-rendering:pixelated]" :alt="suspect.name" />
       <span class="font-semibold text-sm text-[#3d3428]">{{ suspect.name }}</span>
       <span v-if="isPlaced" class="ml-auto text-[0.65rem] text-[#7a6f5c]">colocado</span>
     </div>

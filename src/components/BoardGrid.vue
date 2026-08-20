@@ -4,7 +4,7 @@ import type { Puzzle } from '../types/puzzle'
 import { usePuzzleStore } from '../stores/puzzleStore'
 import { getCell } from '../lib/gridLogic'
 import { FURNITURE_SPRITES } from '../lib/furnitureIcons'
-import { hueOffsetForSuspect } from '../lib/suspectTint'
+import { facePathForSuspect, VICTIM_FACE } from '../lib/suspectFace'
 
 const props = defineProps<{ puzzle: Puzzle }>()
 const store = usePuzzleStore()
@@ -115,24 +115,31 @@ function onCellClick(row: number, col: number) {
         :alt="cell.furniture"
       />
 
-      <img
-        v-if="suspectAt[`${cell.row}-${cell.col}`]"
-        :src="suspectById(suspectAt[`${cell.row}-${cell.col}`])?.isVictim ? '/sprites/token-victim.png' : '/sprites/token.png'"
-        class="w-[78%] h-[78%] object-contain [image-rendering:pixelated] pointer-events-none drop-shadow-md"
-        :style="{
-          filter: [
-            !suspectById(suspectAt[`${cell.row}-${cell.col}`])?.isVictim
-              ? `hue-rotate(${hueOffsetForSuspect(suspectAt[`${cell.row}-${cell.col}`])}deg)`
-              : '',
-            conflictedSuspectIds.has(suspectAt[`${cell.row}-${cell.col}`])
+      <template v-if="suspectAt[`${cell.row}-${cell.col}`]">
+        <img
+          :src="
+            suspectById(suspectAt[`${cell.row}-${cell.col}`])?.isVictim
+              ? VICTIM_FACE
+              : facePathForSuspect(
+                  suspectAt[`${cell.row}-${cell.col}`],
+                  suspectById(suspectAt[`${cell.row}-${cell.col}`])!.gender,
+                )
+          "
+          class="w-[78%] h-[78%] object-contain [image-rendering:pixelated] pointer-events-none drop-shadow-md"
+          :style="{
+            filter: conflictedSuspectIds.has(suspectAt[`${cell.row}-${cell.col}`])
               ? 'drop-shadow(0 0 4px #dc2626) drop-shadow(0 0 4px #dc2626)'
               : '',
-          ]
-            .filter(Boolean)
-            .join(' '),
-        }"
-        :alt="suspectById(suspectAt[`${cell.row}-${cell.col}`])?.name"
-      />
+          }"
+          :alt="suspectById(suspectAt[`${cell.row}-${cell.col}`])?.name"
+        />
+        <span
+          v-if="!suspectById(suspectAt[`${cell.row}-${cell.col}`])?.isVictim"
+          class="absolute bottom-[6%] right-[6%] w-[34%] aspect-square rounded-full bg-[#3d3428] text-white flex items-center justify-center text-[0.5rem] font-bold leading-none pointer-events-none ring-1 ring-[#fdf8ee]"
+        >
+          {{ suspectById(suspectAt[`${cell.row}-${cell.col}`])?.name.charAt(0) }}
+        </span>
+      </template>
     </div>
   </div>
 </template>
