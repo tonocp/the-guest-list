@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Puzzle } from '../types/puzzle'
+import type { Position, Puzzle } from '../types/puzzle'
 import { usePuzzleStore } from '../stores/puzzleStore'
-import { getCell } from '../lib/gridLogic'
-import { FURNITURE_SPRITES } from '../lib/furnitureIcons'
+import { cellKey, getCell, gridLine, multiCellFurniturePlacements } from '../lib/gridLogic'
+import { CONNECTABLE_FURNITURE_SPRITES, FURNITURE_SPRITES } from '../lib/furnitureIcons'
 import { facePathForSuspect, VICTIM_FACE } from '../lib/suspectFace'
 
 const props = defineProps<{ puzzle: Puzzle }>()
@@ -41,19 +41,61 @@ const roomLabelCell = computed(() => {
   return map
 })
 
-const suspectAt = computed(() => {
-  const map: Record<string, string> = {}
-  for (const [suspectId, pos] of Object.entries(store.placements)) {
-    if (pos) map[`${pos.row}-${pos.col}`] = suspectId
-  }
-  return map
-})
-
 const conflictedSuspectIds = computed(() => new Set(store.conflicts.map((c) => c.suspectId)))
 
 function suspectById(id: string) {
   return props.puzzle.suspects.find((s) => s.id === id)
 }
+
+/** Multi-cell rug/sofa pieces — geometry from `multiCellFurniturePlacements`
+ * (gridLogic.ts), computed once and shared by `multiCellPieces` (what to render) and
+ * `multiCellCellKeys` (which per-cell icons to suppress below) so the grouping pass
+ * doesn't run twice per board render. Deliberately never sees suspect placements — the
+ * piece always renders in full, never hidden by a suspect standing on one of its cells
+ * (see that function's doc comment). `placedSuspects` below is drawn afterwards, on top
+ * of these, so a suspect face is still visible rather than covered by the piece under
+ * it. */
+const multiCellPlacements = computed(() => multiCellFurniturePlacements(props.puzzle))
+
+/** One image per multi-cell piece, spanning its cells via CSS grid placement — a real
+ * multi-cell bitmap has no seam to keep pixel-aligned across a grid/DOM boundary,
+ * unlike two independently-bordered cells that merely try to look alike. */
+const multiCellPieces = computed(() => {
+  return multiCellPlacements.value.map((piece) => {
+    const sprites = CONNECTABLE_FURNITURE_SPRITES[piece.type]
+    // multiCellFurniturePlacements only ever produces 'h2'/'v2'/'L' (it filters out
+    // 1-cell pieces), so 'single' never reaches here — the cast just tells TS that.
+    const src =
+      piece.shape === 'L'
+        ? (sprites?.L?.[piece.missingCorner!] ?? FURNITURE_SPRITES[piece.type])
+        : (sprites?.[piece.shape as 'h2' | 'v2'] ?? FURNITURE_SPRITES[piece.type])
+    return {
+      key: `${piece.type}-${piece.cells[0].row}-${piece.cells[0].col}`,
+      src,
+      gridColumn: piece.gridColumn,
+      gridRow: piece.gridRow,
+    }
+  })
+})
+
+const multiCellCellKeys = computed(() => {
+  const keys = new Set<string>()
+  for (const piece of multiCellPlacements.value) {
+    for (const c of piece.cells) keys.add(cellKey(c.row, c.col))
+  }
+  return keys
+})
+
+/** Every currently-placed suspect, as its own single-cell grid overlay drawn after (so:
+ * visually on top of) both the cell backgrounds and the multi-cell furniture overlays
+ * above — see `multiCellPieces`. Kept out of the per-cell `<div>` below so a face is
+ * never stacked *underneath* a spanning piece image just because that image comes
+ * later in the piece list. */
+const placedSuspects = computed(() => {
+  return Object.entries(store.placements)
+    .filter((e): e is [string, Position] => e[1] !== null)
+    .map(([suspectId, pos]) => ({ suspectId, pos, suspect: suspectById(suspectId)! }))
+})
 
 function cellStyle(row: number, col: number) {
   const cell = getCell(props.puzzle, row, col)!
@@ -67,6 +109,14 @@ function cellStyle(row: number, col: number) {
   const bottom = neighbor(row + 1, col)
 
   return {
+    // Explicit placement, not left to auto-flow: the multi-cell piece overlays below
+    // use explicit gridColumn/gridRow too, and CSS Grid reserves explicitly-placed
+    // items' cells *before* auto-flowing the rest — without this, that reservation
+    // pushes some cell divs into an extra implicit row, breaking the 1:1 match between
+    // a cell div and its visual position (and silently eating clicks on the shifted
+    // cells, since onCellClick still fires with the div's own, now-wrong, row/col).
+    gridColumn: gridLine(col),
+    gridRow: gridLine(row),
     borderTop: !top || top.roomId !== cell.roomId ? thick : thin,
     borderLeft: !left || left.roomId !== cell.roomId ? thick : thin,
     borderRight: !right || right.roomId !== cell.roomId ? thick : thin,
@@ -109,37 +159,42 @@ function onCellClick(row: number, col: number) {
       </span>
 
       <img
-        v-if="cell.furniture && !suspectAt[`${cell.row}-${cell.col}`]"
+        v-if="cell.furniture && !multiCellCellKeys.has(cellKey(cell.row, cell.col))"
         :src="FURNITURE_SPRITES[cell.furniture]"
-        class="w-[70%] h-[70%] object-contain opacity-90 [image-rendering:pixelated] pointer-events-none"
+        class="w-full h-full object-contain opacity-90 [image-rendering:pixelated] pointer-events-none"
         :alt="cell.furniture"
       />
+    </div>
 
-      <template v-if="suspectAt[`${cell.row}-${cell.col}`]">
-        <img
-          :src="
-            suspectById(suspectAt[`${cell.row}-${cell.col}`])?.isVictim
-              ? VICTIM_FACE
-              : facePathForSuspect(
-                  suspectAt[`${cell.row}-${cell.col}`],
-                  suspectById(suspectAt[`${cell.row}-${cell.col}`])!.gender,
-                )
-          "
-          class="w-[78%] h-[78%] object-contain [image-rendering:pixelated] pointer-events-none drop-shadow-md"
-          :style="{
-            filter: conflictedSuspectIds.has(suspectAt[`${cell.row}-${cell.col}`])
-              ? 'drop-shadow(0 0 4px #dc2626) drop-shadow(0 0 4px #dc2626)'
-              : '',
-          }"
-          :alt="suspectById(suspectAt[`${cell.row}-${cell.col}`])?.name"
-        />
-        <span
-          v-if="!suspectById(suspectAt[`${cell.row}-${cell.col}`])?.isVictim"
-          class="absolute bottom-[6%] right-[6%] w-[34%] aspect-square rounded-full bg-[#3d3428] text-white flex items-center justify-center text-[0.5rem] font-bold leading-none pointer-events-none ring-1 ring-[#fdf8ee]"
-        >
-          {{ suspectById(suspectAt[`${cell.row}-${cell.col}`])?.name.charAt(0) }}
-        </span>
-      </template>
+    <img
+      v-for="piece in multiCellPieces"
+      :key="piece.key"
+      :src="piece.src"
+      class="w-full h-full object-fill opacity-90 [image-rendering:pixelated] pointer-events-none"
+      :style="{ gridColumn: piece.gridColumn, gridRow: piece.gridRow }"
+      :alt="piece.key"
+    />
+
+    <div
+      v-for="p in placedSuspects"
+      :key="p.suspectId"
+      class="relative flex items-center justify-center pointer-events-none"
+      :style="{ gridColumn: gridLine(p.pos.col), gridRow: gridLine(p.pos.row) }"
+    >
+      <img
+        :src="p.suspect.isVictim ? VICTIM_FACE : facePathForSuspect(p.suspectId, p.suspect.gender)"
+        class="w-[78%] h-[78%] object-contain [image-rendering:pixelated] drop-shadow-md"
+        :style="{
+          filter: conflictedSuspectIds.has(p.suspectId) ? 'drop-shadow(0 0 4px #dc2626) drop-shadow(0 0 4px #dc2626)' : '',
+        }"
+        :alt="p.suspect.name"
+      />
+      <span
+        v-if="!p.suspect.isVictim"
+        class="absolute bottom-[6%] right-[6%] w-[34%] aspect-square rounded-full bg-[#3d3428] text-white flex items-center justify-center text-[0.5rem] font-bold leading-none ring-1 ring-[#fdf8ee]"
+      >
+        {{ p.suspect.name.charAt(0) }}
+      </span>
     </div>
   </div>
 </template>

@@ -8,7 +8,10 @@ const OUT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../public/spri
 mkdirSync(OUT_DIR, { recursive: true })
 
 const SIZE = 16
-const OUT = 128
+const SCALE = 8
+// Shared by rugMotif and sofaMotif/sofaLMotif so a multi-cell piece always floats the
+// same distance from its cell's edge regardless of which furniture type it is.
+const FURNITURE_MARGIN = 2
 
 // ---- palette --------------------------------------------------------
 const DARK = hex('#2a2430')
@@ -39,6 +42,7 @@ const RUG_B = hex('#e8899f')
 const RUG_DK = hex('#9c4460')
 const CHAIR = hex('#a9714a')
 const CHAIR_DK = hex('#7d5133')
+const CHAIR_LT = hex('#c99a68')
 const SHELF = hex('#8b5a3c')
 const SHELF_DK = hex('#5f3c24')
 const SHELF_BG = hex('#e8ddc8')
@@ -77,26 +81,38 @@ function hex(c) {
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16), 255]
 }
 
-function newCanvas(size = SIZE) {
-  return Array.from({ length: size }, () => new Array(size).fill(null))
+/** Canvases are rectangular (width = canvas[0].length, height = canvas.length) —
+ * multi-cell furniture pieces render at e.g. 32x16, not just 16x16. */
+function newCanvas(width = SIZE, height = width) {
+  return Array.from({ length: height }, () => new Array(width).fill(null))
 }
 
 function rect(canvas, x0, y0, x1, y1, color) {
+  const h = canvas.length
+  const w = canvas[0].length
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
-      if (x >= 0 && x < canvas.length && y >= 0 && y < canvas.length) canvas[y][x] = color
+      if (x >= 0 && x < w && y >= 0 && y < h) canvas[y][x] = color
     }
   }
 }
 
 function px(canvas, x, y, color) {
-  if (x >= 0 && x < canvas.length && y >= 0 && y < canvas.length) canvas[y][x] = color
+  if (x >= 0 && x < canvas[0].length && y >= 0 && y < canvas.length) canvas[y][x] = color
 }
 
+/** `cx`/`cy` are in the same continuous space as pixel *centers* (`x + 0.5`), not pixel
+ * indices — so a circle meant to be centered on a 16-wide canvas needs `cx = 8`, not
+ * `7.5` (which looks like "the middle index" but actually lands the circle half a
+ * pixel left of true center, and made a couple of icons visibly off-center before this
+ * was caught — see `center()`'s doc comment and docs/visual-design.md). Two circles
+ * meant to mirror each other left-right need `cx1 + cx2 = 16` for the same reason (not
+ * `15`, which is what "both average to 7.5" gives you). */
 function circle(canvas, cx, cy, r, color) {
-  const size = canvas.length
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
+  const h = canvas.length
+  const w = canvas[0].length
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
       const dx = x - cx + 0.5
       const dy = y - cy + 0.5
       if (dx * dx + dy * dy <= r * r) canvas[y][x] = color
@@ -105,37 +121,127 @@ function circle(canvas, cx, cy, r, color) {
 }
 
 function outline(canvas, color) {
-  const size = canvas.length
+  const h = canvas.length
+  const w = canvas[0].length
   const snapshot = canvas.map((row) => row.slice())
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
       if (snapshot[y][x]) continue
       const hasFilledNeighbor = [
         [x - 1, y],
         [x + 1, y],
         [x, y - 1],
         [x, y + 1],
-      ].some(([nx, ny]) => nx >= 0 && nx < size && ny >= 0 && ny < size && snapshot[ny][nx])
+      ].some(([nx, ny]) => nx >= 0 && nx < w && ny >= 0 && ny < h && snapshot[ny][nx])
       if (hasFilledNeighbor) canvas[y][x] = color
     }
   }
 }
 
+/** Rotates a canvas 90° clockwise, as real pixel data (width/height swap for a
+ * non-square canvas) — used to bake the L-shaped sofa's 4 orientations as separate
+ * files (`sofaLVariants`) instead of relying on a CSS `transform: rotate` at render
+ * time. A real pixel rotation carries any asymmetric detail (a backrest on only 2 of
+ * the piece's edges, say) to the right place automatically; CSS rotation of a single
+ * shared image cannot, because two differently-rotated *instances* of the same source
+ * pixels have no way to each apply a different asymmetric design — see `sofaMotif()`
+ * and docs/visual-design.md for the design that ran into exactly this. */
+function rotate90CW(canvas) {
+  const h = canvas.length
+  const w = canvas[0].length
+  const out = newCanvas(h, w)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      out[x][h - 1 - y] = canvas[y][x]
+    }
+  }
+  return out
+}
+
+/** Shifts a canvas's drawn content so its bounding box is centered, horizontally and
+ * vertically, within the canvas — called right before `outline()` on every single-cell
+ * icon (see the `center()` calls below), so each one is centered by construction
+ * instead of by hand-tuning coordinates to be symmetric (which drifts easily — e.g. a
+ * handful of the furniture icons ended up visibly off-center after later margin/detail
+ * tweaks moved one side of a shape without the other, before this existed). Not used
+ * for multi-cell pieces (`rugPairH/V`, `sofaPairH/V`, the L): their content is meant to
+ * fill/connect across the piece's whole footprint, including the deliberately-empty
+ * quadrant of the L — centering would fight that instead of a genuine margin. */
+function center(canvas) {
+  const h = canvas.length
+  const w = canvas[0].length
+  let minX = w
+  let maxX = -1
+  let minY = h
+  let maxY = -1
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!canvas[y][x]) continue
+      if (x < minX) minX = x
+      if (x > maxX) maxX = x
+      if (y < minY) minY = y
+      if (y > maxY) maxY = y
+    }
+  }
+  if (maxX < minX) return // nothing drawn
+  const dx = Math.round((w - (maxX - minX + 1)) / 2) - minX
+  const dy = Math.round((h - (maxY - minY + 1)) / 2) - minY
+  if (dx === 0 && dy === 0) return
+  const snapshot = canvas.map((row) => row.slice())
+  for (const row of canvas) row.fill(null)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (snapshot[y][x]) px(canvas, x + dx, y + dy, snapshot[y][x])
+    }
+  }
+}
+
+/** Clips `n` pixels off each of the 4 corners of a rect, for a softened silhouette
+ * instead of a hard right angle — used by most furniture pieces below. A corner
+ * touching an `open` edge (see `bevel()`) is left un-clipped: rounding it would notch
+ * a transparent (then outline()-darkened) speck right at the seam where a multi-cell
+ * piece is supposed to run flush into its neighbor. */
+function clipCorners(canvas, x0, y0, x1, y1, n = 1, open = {}) {
+  if (!(open.top || open.left))
+    for (let i = 0; i < n; i++) for (let j = 0; j < n - i; j++) px(canvas, x0 + i, y0 + j, null)
+  if (!(open.top || open.right))
+    for (let i = 0; i < n; i++) for (let j = 0; j < n - i; j++) px(canvas, x1 - i, y0 + j, null)
+  if (!(open.bottom || open.left))
+    for (let i = 0; i < n; i++) for (let j = 0; j < n - i; j++) px(canvas, x0 + i, y1 - j, null)
+  if (!(open.bottom || open.right))
+    for (let i = 0; i < n; i++) for (let j = 0; j < n - i; j++) px(canvas, x1 - i, y1 - j, null)
+}
+
+/** Fills a rect with `base`, then lays a 1px `light` seam on the top/left edges and a
+ * 1px `dark` seam on the bottom/right edges — a cheap pseudo-3D bevel, our standard
+ * shading model (light from the top-left) across every furniture piece. Pass `open*:
+ * true` to skip a seam on that edge: used by the multi-cell rug/sofa tiles so the edge
+ * touching the next cell has no seam and the fill runs flush to the border, making the
+ * piece read as one continuous shape across cells instead of tiled icons. */
+function bevel(canvas, x0, y0, x1, y1, base, light, dark, open = {}) {
+  rect(canvas, x0, y0, x1, y1, base)
+  if (!open.top) rect(canvas, x0, y0, x1, y0, light)
+  if (!open.left) rect(canvas, x0, y0, x0, y1, light)
+  if (!open.bottom) rect(canvas, x0, y1, x1, y1, dark)
+  if (!open.right) rect(canvas, x1, y0, x1, y1, dark)
+}
+
 async function render(canvas, filename) {
-  const size = canvas.length
-  const buf = Buffer.alloc(size * size * 4)
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
+  const height = canvas.length
+  const width = canvas[0].length
+  const buf = Buffer.alloc(width * height * 4)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
       const c = canvas[y][x] ?? [0, 0, 0, 0]
-      const i = (y * size + x) * 4
+      const i = (y * width + x) * 4
       buf[i] = c[0]
       buf[i + 1] = c[1]
       buf[i + 2] = c[2]
       buf[i + 3] = c[3]
     }
   }
-  await sharp(buf, { raw: { width: size, height: size, channels: 4 } })
-    .resize(OUT, OUT, { kernel: 'nearest' })
+  await sharp(buf, { raw: { width, height, channels: 4 } })
+    .resize(width * SCALE, height * SCALE, { kernel: 'nearest' })
     .png()
     .toFile(`${OUT_DIR}/${filename}`)
   console.log('wrote', filename)
@@ -145,56 +251,106 @@ async function render(canvas, filename) {
 
 async function plant() {
   const c = newCanvas()
-  rect(c, 4, 12, 11, 14, TERRACOTTA)
-  rect(c, 4, 12, 11, 12, TERRACOTTA_DK)
-  rect(c, 5, 14, 10, 14, TERRACOTTA_DK)
-  circle(c, 7, 7, 4, LEAF)
-  circle(c, 4, 9, 2.4, LEAF)
-  circle(c, 11, 9, 2.4, LEAF)
-  circle(c, 6, 4, 1.6, LEAF_LT)
-  circle(c, 9, 6, 1.2, LEAF_DK)
+  bevel(c, 4, 11, 11, 13, TERRACOTTA, TERRACOTTA_DK, TERRACOTTA_DK)
+  clipCorners(c, 4, 11, 11, 13, 1)
+  circle(c, 8, 7, 4.3, LEAF)
+  circle(c, 4.8, 9, 2.3, LEAF)
+  circle(c, 11.2, 9, 2.3, LEAF)
+  circle(c, 10, 5, 2, LEAF_DK)
+  circle(c, 6, 4.5, 1.6, LEAF_LT)
+  circle(c, 8.5, 9, 1.4, LEAF_LT)
+  center(c)
   outline(c, DARK)
   await render(c, 'plant.png')
 }
 
-async function rug() {
-  const c = newCanvas()
-  rect(c, 2, 4, 13, 12, RUG_B)
-  rect(c, 3, 5, 12, 11, RUG_A)
-  rect(c, 6, 7, 9, 9, RUG_DK)
-  rect(c, 7, 8, 8, 8, RUG_B)
-  // clip rounded corners
-  for (const [x, y] of [
-    [2, 4],
-    [13, 4],
-    [2, 12],
-    [13, 12],
-  ]) {
-    px(c, x, y, null)
-  }
-  outline(c, DARK)
-  await render(c, 'rug.png')
+/** Area rug, top-down: a fringed frame around a field color with one diamond medallion
+ * centered on the whole piece, inset by `FURNITURE_MARGIN` on every side (same margin
+ * as the sofa, so every multi-cell piece floats the same distance off the cell edge) —
+ * so it reads as a rug floating on the floor, not a floor tile filling the cell
+ * edge-to-edge. Reused as-is for the single-cell icon and for the 2-cell pieces
+ * (`rugPairH`/`rugPairV`, a 32x16 or 16x32 canvas) — it's drawn directly at whatever
+ * size the canvas is, in one pass, so a multi-cell rug is one seamless bitmap rather
+ * than two separately-rendered cells that have to line up pixel-perfect across a
+ * DOM/grid boundary (which is what produced the visible seam this replaces — see
+ * BoardGrid.vue's `multiCellPieces`). Since it's one piece with nothing else to connect
+ * to, the margin applies on every side alike — there's no longer a "joined" edge to
+ * leave flush like a real 2-tile rug would have. */
+function rugMotif(c) {
+  const w = c[0].length
+  const h = c.length
+  const m = FURNITURE_MARGIN
+  const x1 = w - 1 - m
+  const y1 = h - 1 - m
+  rect(c, m, m, x1, y1, RUG_DK)
+  rect(c, m + 1, m + 1, x1 - 1, y1 - 1, RUG_A)
+  rect(c, m + 2, m + 2, x1 - 2, y1 - 2, RUG_B)
+  const cx = w / 2
+  const cy = h / 2
+  rect(c, cx - 2, cy - 2, cx + 1, cy + 1, RUG_DK)
+  rect(c, cx - 1, cy - 1, cx, cy, RUG_B)
+  clipCorners(c, m, m, x1, y1, 1)
 }
 
+async function rugSolo() {
+  const c = newCanvas(16, 16)
+  rugMotif(c)
+  center(c)
+  outline(c, DARK)
+  await render(c, 'rug-solo.png')
+}
+
+async function rugPairH() {
+  const c = newCanvas(32, 16)
+  rugMotif(c)
+  outline(c, DARK)
+  await render(c, 'rug-pair-h.png')
+}
+
+async function rugPairV() {
+  const c = newCanvas(16, 32)
+  rugMotif(c)
+  outline(c, DARK)
+  await render(c, 'rug-pair-v.png')
+}
+
+/** Chair, top-down — same value-zone language as `sofaMotif`: a dark backrest band
+ * along the top edge with 2 light slat cut-throughs for detail, a seat cushion filling
+ * the rest with a small tufted highlight, and 4 legs poking past the seat's own edge at
+ * the corners (splayed slightly wider than the seat, as they'd read from directly
+ * above). Uses `FURNITURE_MARGIN`, same as `rugMotif`/`sofaMotif`, so all 3 furniture
+ * families float the same distance off the cell edge. */
 async function chair() {
-  const c = newCanvas()
-  // backrest, seen peeking out from behind the seat
-  rect(c, 3, 2, 12, 6, CHAIR_DK)
-  rect(c, 4, 3, 11, 5, CHAIR)
-  // seat
-  rect(c, 3, 7, 12, 12, CHAIR)
-  rect(c, 4, 8, 11, 11, CHAIR_DK)
-  rect(c, 4, 8, 11, 10, CHAIR)
-  // legs poking out under the seat
-  rect(c, 3, 13, 4, 14, CHAIR_DK)
-  rect(c, 11, 13, 12, 14, CHAIR_DK)
+  const c = newCanvas(16, 16)
+  const m = FURNITURE_MARGIN
+  const x1 = 15 - m
+  const y1 = 15 - m
+
+  rect(c, m, m, x1, y1, CHAIR) // seat, base layer
+  rect(c, m, m, x1, m + 4, CHAIR_DK) // backrest
+  clipCorners(c, m, m, x1, m + 4, 1, { bottom: true })
+  rect(c, m + 3, m + 1, m + 3, m + 3, CHAIR) // backrest slats (light cut-throughs)
+  rect(c, x1 - 3, m + 1, x1 - 3, m + 3, CHAIR)
+  rect(c, m + 5, m + 7, x1 - 5, m + 8, CHAIR_LT) // seat tufting highlight
+
+  for (const [lx, ly] of [
+    [m - 1, m + 5], // back-left leg, just below the backrest
+    [x1, m + 5], // back-right leg
+    [m - 1, y1 - 2], // front-left leg
+    [x1, y1 - 2], // front-right leg
+  ]) {
+    rect(c, lx, ly, lx + 1, ly + 2, CHAIR_DK)
+  }
+
+  center(c)
   outline(c, DARK)
   await render(c, 'chair.png')
 }
 
 async function bookshelf() {
   const c = newCanvas()
-  rect(c, 2, 2, 13, 13, SHELF)
+  bevel(c, 2, 2, 13, 13, SHELF, SHELF, SHELF_DK)
+  clipCorners(c, 2, 2, 13, 13, 1)
   rect(c, 3, 3, 12, 12, SHELF_BG)
   const books = [BOOK_RED, BOOK_BLUE, BOOK_YEL, BOOK_GRN]
   let i = 0
@@ -207,19 +363,112 @@ async function bookshelf() {
   rect(c, 3, 6, 12, 6, SHELF_DK)
   rect(c, 3, 10, 12, 10, SHELF_DK)
   rect(c, 3, 11, 12, 13, SHELF_BG)
+  center(c)
   outline(c, DARK)
   await render(c, 'bookshelf.png')
 }
 
-async function sofa() {
-  const c = newCanvas()
-  rect(c, 2, 6, 13, 12, SOFA)
-  rect(c, 4, 5, 11, 6, SOFA_DK)
-  rect(c, 2, 5, 3, 13, SOFA_DK)
-  rect(c, 12, 5, 13, 13, SOFA_DK)
-  rect(c, 7, 7, 8, 11, SOFA_LT)
+/** Sofa, top-down, 3 distinct value zones so each part of the silhouette actually
+ * reads as a different piece of furniture instead of one flat rect: a dark backrest
+ * band along one edge, light rounded armrest caps at the two ends (poking 1px past the
+ * seat's own edge, so they read as a separate raised shape, not a color patch), and the
+ * mid-tone seat filling what's left. The backrest is genuinely asymmetric (only on one
+ * edge, not a uniform rim) — that only became safe once every multi-cell shape became
+ * its own pre-baked bitmap; nothing here relies on rotating a shared image at render
+ * time to face a different direction (that's exactly what broke the first version of
+ * this redesign — see `sofaLMotif()` and docs/visual-design.md). `backrest` is which
+ * edge ('top' or 'left') the band sits on. */
+function sofaMotif(c, backrest) {
+  const w = c[0].length
+  const h = c.length
+  const m = FURNITURE_MARGIN
+  const x1 = w - 1 - m
+  const y1 = h - 1 - m
+  const alongLen = backrest === 'top' ? x1 - m + 1 : y1 - m + 1
+
+  rect(c, m, m, x1, y1, SOFA) // seat fill, base layer
+  if (backrest === 'top') {
+    rect(c, m, m, x1, m + 4, SOFA_DK) // backrest
+    clipCorners(c, m, m, x1, m + 4, 1, { bottom: true })
+    rect(c, m - 1, m + 4, m + 2, y1, SOFA_LT) // left armrest
+    clipCorners(c, m - 1, m + 4, m + 2, y1, 1, { right: true })
+    rect(c, x1 - 2, m + 4, x1 + 1, y1, SOFA_LT) // right armrest
+    clipCorners(c, x1 - 2, m + 4, x1 + 1, y1, 1, { left: true })
+  } else {
+    rect(c, m, m, m + 4, y1, SOFA_DK)
+    clipCorners(c, m, m, m + 4, y1, 1, { right: true })
+    rect(c, m + 4, m - 1, x1, m + 2, SOFA_LT)
+    clipCorners(c, m + 4, m - 1, x1, m + 2, 1, { bottom: true })
+    rect(c, m + 4, y1 - 2, x1, y1 + 1, SOFA_LT)
+    clipCorners(c, m + 4, y1 - 2, x1, y1 + 1, 1, { top: true })
+  }
+
+  // seam(s) marking individual cushions along the run
+  const segments = Math.max(1, Math.round(alongLen / 14))
+  for (let i = 1; i < segments; i++) {
+    const t = Math.round(m + (alongLen * i) / segments)
+    if (backrest === 'top') rect(c, t, m + 4, t, y1, SOFA_DK)
+    else rect(c, m + 4, t, x1, t, SOFA_DK)
+  }
+}
+
+async function sofaSolo() {
+  const c = newCanvas(16, 16)
+  sofaMotif(c, 'top')
+  center(c)
   outline(c, DARK)
-  await render(c, 'sofa.png')
+  await render(c, 'sofa-solo.png')
+}
+
+async function sofaPairH() {
+  const c = newCanvas(32, 16)
+  sofaMotif(c, 'top')
+  outline(c, DARK)
+  await render(c, 'sofa-pair-h.png')
+}
+
+async function sofaPairV() {
+  const c = newCanvas(16, 32)
+  sofaMotif(c, 'left')
+  outline(c, DARK)
+  await render(c, 'sofa-pair-v.png')
+}
+
+/** L-shaped 3-cell sofa, canonical orientation: corner at top-left, arms extending
+ * right and down, bottom-right quadrant empty. The backrest wraps the two outer
+ * (top+left) edges of the whole L — matching `sofaMotif`'s "one edge, not a uniform
+ * rim" language — with an armrest cap at the true end of each arm. Baked once here and
+ * rotated as raw pixel data (`rotate90CW`, in `sofaLVariants`) into the other 3
+ * possible missing-corner orientations, instead of a CSS `transform: rotate` at render
+ * time — see `rotate90CW`'s doc comment for why that matters for an asymmetric design
+ * like this one. */
+function sofaLMotif() {
+  const c = newCanvas(32, 32)
+  const m = FURNITURE_MARGIN
+  const far = 32 - 1 - m
+  const elbow = 15 // last column/row still shared by both arms of the L
+  rect(c, m, m, elbow, far, SOFA) // left arm (vertical bar of the L)
+  rect(c, m, m, far, elbow, SOFA) // top arm (horizontal bar of the L)
+  rect(c, m, m, far, m + 3, SOFA_DK) // backrest along the top
+  rect(c, m, m, m + 3, far, SOFA_DK) // backrest along the left
+  rect(c, far - 2, m + 4, far, elbow, SOFA_LT) // armrest at the far end of the top arm
+  rect(c, m + 4, far - 2, elbow, far, SOFA_LT) // armrest at the far end of the left arm
+  for (const [x, y] of [[m, m], [far, m], [m, far]]) px(c, x, y, null)
+  outline(c, DARK)
+  return c
+}
+
+async function sofaLVariants() {
+  let c = sofaLMotif()
+  const rotationByMissingCorner = { bottomRight: 0, bottomLeft: 90, topLeft: 180, topRight: 270 }
+  const byRotation = new Map([[0, c]])
+  for (const rotation of [90, 180, 270]) {
+    c = rotate90CW(c)
+    byRotation.set(rotation, c)
+  }
+  for (const [missingCorner, rotation] of Object.entries(rotationByMissingCorner)) {
+    await render(byRotation.get(rotation), `sofa-l-${missingCorner}.png`)
+  }
 }
 
 async function window_() {
@@ -235,71 +484,87 @@ async function window_() {
   rect(c, 9, 9, 10, 10, GLASS_LT)
   rect(c, 7, 2, 8, 13, FRAME)
   rect(c, 2, 7, 13, 8, FRAME)
+  center(c)
   outline(c, DARK)
   await render(c, 'window.png')
 }
 
 async function painting() {
   const c = newCanvas()
-  rect(c, 2, 2, 13, 13, GOLD)
+  bevel(c, 2, 2, 13, 13, GOLD, GOLD, GOLD_DK)
   rect(c, 3, 3, 12, 12, GOLD_DK)
   rect(c, 4, 4, 11, 11, CANVAS_BG)
   rect(c, 4, 9, 11, 9, LEAF_DK)
   for (let x = 5; x <= 9; x++) rect(c, x, 8 - Math.abs(x - 7), x, 8, TERRACOTTA_DK)
   circle(c, 10, 5, 1.4, GOLD)
+  center(c)
   outline(c, DARK)
   await render(c, 'painting.png')
 }
 
 async function lamp() {
   const c = newCanvas()
-  circle(c, 7, 7, 6, LAMP_DK)
-  circle(c, 7, 7, 5, LAMP_SHADE)
-  circle(c, 7, 7, 2.6, LAMP_GLOW)
+  circle(c, 8, 8, 5.5, LAMP_DK)
+  circle(c, 7.7, 7.7, 4.6, LAMP_SHADE)
+  circle(c, 8, 8, 2.6, LAMP_GLOW)
+  circle(c, 7, 7, 1, hex('#fffdf5'))
+  center(c)
   outline(c, DARK)
   await render(c, 'lamp.png')
 }
 
+/** Round table, top-down: wood-grain rings, a runner stripe, and legs peeking out from
+ * under the tabletop at the diagonals (1px past `FURNITURE_MARGIN`, same convention as
+ * the chair's legs and the sofa's armrests). */
 async function table() {
   const c = newCanvas()
-  circle(c, 7, 7, 6, TABLE_DK)
-  circle(c, 7, 7, 5.3, TABLE)
-  circle(c, 5.5, 5.5, 2, TABLE_LT)
+  for (const [x, y] of [[1, 1], [13, 1], [1, 13], [13, 13]]) rect(c, x, y, x + 1, y + 1, TABLE_DK)
+  circle(c, 8, 8, 5.5, TABLE_DK)
+  circle(c, 8, 8, 4.8, TABLE)
+  circle(c, 8, 8, 3.8, TABLE_DK)
+  circle(c, 8, 8, 3.2, TABLE)
+  rect(c, 4, 6, 11, 8, TABLE_LT)
+  circle(c, 6.5, 6.5, 1.6, hex('#e0c396'))
+  center(c)
   outline(c, DARK)
   await render(c, 'table.png')
 }
 
 async function mirror() {
   const c = newCanvas()
-  circle(c, 7, 7.5, 6.3, MIRROR_FRAME_DK)
-  circle(c, 7, 7.5, 5.4, MIRROR_FRAME)
-  circle(c, 7, 7.5, 4.2, MIRROR_GLASS)
-  circle(c, 5.5, 5.5, 1.6, MIRROR_GLASS_LT)
-  rect(c, 6, 13, 9, 14, MIRROR_FRAME_DK)
+  circle(c, 8, 7, 5, MIRROR_FRAME_DK)
+  circle(c, 8, 7, 4.2, MIRROR_FRAME)
+  circle(c, 8, 7, 3.2, MIRROR_GLASS)
+  circle(c, 6.5, 5.5, 1.3, MIRROR_GLASS_LT)
+  rect(c, 6, 12, 9, 13, MIRROR_FRAME_DK)
+  center(c)
   outline(c, DARK)
   await render(c, 'mirror.png')
 }
 
 async function clock() {
   const c = newCanvas()
-  circle(c, 7, 7, 6, CLOCK_RIM)
-  circle(c, 7, 7, 5, CLOCK_FACE)
-  rect(c, 7, 3, 7, 7, CLOCK_RIM)
+  circle(c, 8, 8, 5.5, CLOCK_RIM)
+  circle(c, 8, 8, 4.5, CLOCK_FACE)
+  for (const [x, y] of [[7, 2], [7, 13], [2, 7], [13, 7]]) px(c, x, y, CLOCK_RIM)
+  rect(c, 7, 5, 7, 7, CLOCK_RIM)
   rect(c, 7, 7, 10, 7, CLOCK_RIM)
-  circle(c, 7, 7, 0.8, CLOCK_RIM)
+  circle(c, 8, 8, 0.8, CLOCK_RIM)
+  center(c)
   outline(c, DARK)
   await render(c, 'clock.png')
 }
 
 async function vase() {
   const c = newCanvas()
-  rect(c, 5, 9, 10, 13, VASE_BODY)
+  bevel(c, 5, 9, 10, 13, VASE_BODY, VASE_LT, VASE_DK)
+  clipCorners(c, 5, 9, 10, 13, 1)
   rect(c, 6, 6, 9, 9, VASE_DK)
-  rect(c, 6, 4, 9, 6, VASE_BODY)
-  rect(c, 5, 9, 6, 12, VASE_LT)
-  circle(c, 5, 3, 1.3, LEAF)
-  circle(c, 7.5, 2, 1.3, LEAF_LT)
-  circle(c, 10, 3, 1.3, LEAF)
+  bevel(c, 6, 4, 9, 6, VASE_BODY, VASE_LT, VASE_DK)
+  circle(c, 5.5, 4, 1.2, LEAF)
+  circle(c, 8, 3.8, 1.2, LEAF_LT)
+  circle(c, 10.5, 4, 1.2, LEAF)
+  center(c)
   outline(c, DARK)
   await render(c, 'vase.png')
 }
@@ -376,10 +641,15 @@ async function floorDither() {
 }
 
 await plant()
-await rug()
+await rugSolo()
+await rugPairH()
+await rugPairV()
 await chair()
 await bookshelf()
-await sofa()
+await sofaSolo()
+await sofaPairH()
+await sofaPairV()
+await sofaLVariants()
 await window_()
 await painting()
 await lamp()

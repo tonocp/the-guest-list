@@ -45,12 +45,16 @@ Ver [`game-rules.md`](./game-rules.md) para el significado de cada campo, y
 ## Lógica de dominio pura (`src/lib/`)
 
 - **`gridLogic.ts`** — las reglas del juego como funciones puras: `isNextTo`,
-  `getConflicts`, `isComplete`, `matchesSolution`, `getMurderer`.
+  `getConflicts`, `isComplete`, `matchesSolution`, `getMurderer`, y
+  `furniturePieces`/`pieceShape`/`multiCellFurniturePlacements` (agrupan las celdas de
+  una pieza de mobiliario multi-celda y calculan qué sprite y colocación de grid usar,
+  ver [`visual-design.md`](./visual-design.md)).
 - **`solver.ts`** — resuelve/cuenta soluciones para un conjunto de reglas dado
   (backtracking + poda). Ver [`procedural-generator.md`](./procedural-generator.md).
 - **`rng.ts`** — PRNG determinista (mulberry32) para que el generador sea reproducible
   por semilla.
-- **`furnitureIcons.ts`** — mapa `FurnitureType` → ruta de sprite.
+- **`furnitureIcons.ts`** — mapa `FurnitureType` → ruta de sprite base, más
+  `CONNECTABLE_FURNITURE_SPRITES` para las variantes conectadas de `rug`/`sofa`.
 - **`suspectFace.ts`** — hash determinista de `suspectId` → sprite de cara (tono de
   piel + color de pelo), con el estilo de pelo según `gender`. Ver
   [`visual-design.md`](./visual-design.md).

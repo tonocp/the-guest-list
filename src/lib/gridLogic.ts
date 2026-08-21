@@ -1,7 +1,13 @@
-import type { Cell, Position, Puzzle } from '../types/puzzle'
+import type { Cell, FurnitureType, Position, Puzzle } from '../types/puzzle'
 
 export function cellKey(row: number, col: number): string {
   return `${row}-${col}`
+}
+
+/** A CSS `grid-column`/`grid-row` value (1-indexed lines) for a single 0-indexed
+ * row/col, or spanning from `start` to `end` inclusive. */
+export function gridLine(start: number, end: number = start): string {
+  return `${start + 1} / ${end + 2}`
 }
 
 export function getCell(puzzle: Pick<Puzzle, 'cells'>, row: number, col: number): Cell | undefined {
@@ -58,6 +64,99 @@ export function matchesSolution(puzzle: Puzzle, placements: Placements): boolean
     const solved = puzzle.solution[s.id]
     return !!placed && placed.row === solved.row && placed.col === solved.col
   })
+}
+
+export interface FurniturePiece {
+  type: FurnitureType
+  cells: Position[]
+  minRow: number
+  maxRow: number
+  minCol: number
+  maxCol: number
+  /** Only set for a 3-cell piece (the L-shaped sofa — see `generator/furniture.ts`
+   * `growSofa`), whose footprint spans a 2x2 bounding box with one corner empty. */
+  missingCorner?: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
+}
+
+/** Groups the puzzle's furnished cells into pieces by type — each `FurnitureType`
+ * appears at most once per puzzle (see `generator/furniture.ts`), so cells sharing a
+ * type are guaranteed to be the same piece, with no extra footprint metadata needed on
+ * `Cell`/`Puzzle`. A single-cell type (or a rug/sofa that only grew to 1 cell) comes
+ * back as a 1-cell piece — BoardGrid.vue renders those with the plain per-cell icon and
+ * only builds a spanning overlay for pieces with more than 1 cell. */
+export function furniturePieces(puzzle: Pick<Puzzle, 'cells'>): FurniturePiece[] {
+  const byType = new Map<FurnitureType, Position[]>()
+  for (const cell of puzzle.cells) {
+    if (!cell.furniture) continue
+    const list = byType.get(cell.furniture) ?? []
+    list.push({ row: cell.row, col: cell.col })
+    byType.set(cell.furniture, list)
+  }
+
+  const pieces: FurniturePiece[] = []
+  for (const [type, cells] of byType) {
+    const minRow = Math.min(...cells.map((c) => c.row))
+    const maxRow = Math.max(...cells.map((c) => c.row))
+    const minCol = Math.min(...cells.map((c) => c.col))
+    const maxCol = Math.max(...cells.map((c) => c.col))
+
+    let missingCorner: FurniturePiece['missingCorner']
+    if (cells.length === 3) {
+      const has = (row: number, col: number) => cells.some((c) => c.row === row && c.col === col)
+      if (!has(minRow, minCol)) missingCorner = 'topLeft'
+      else if (!has(minRow, maxCol)) missingCorner = 'topRight'
+      else if (!has(maxRow, minCol)) missingCorner = 'bottomLeft'
+      else missingCorner = 'bottomRight'
+    }
+
+    pieces.push({ type, cells, minRow, maxRow, minCol, maxCol, missingCorner })
+  }
+  return pieces
+}
+
+export type PieceShape = 'single' | 'h2' | 'v2' | 'L'
+
+/** Which sprite shape renders a piece from `furniturePieces()`. Every shape (including
+ * each of the 4 possible L orientations) has its own dedicated pre-baked sprite file —
+ * see `furnitureIcons.ts` — so there's no rotation left to compute here; picking the
+ * right file for an 'L' piece just needs `piece.missingCorner` directly. */
+export function pieceShape(piece: FurniturePiece): PieceShape {
+  if (piece.cells.length === 1) return 'single'
+  if (piece.cells.length === 3) return 'L'
+  return piece.minRow === piece.maxRow ? 'h2' : 'v2'
+}
+
+export interface MultiCellFurniturePlacement {
+  type: FurnitureType
+  cells: Position[]
+  shape: PieceShape
+  missingCorner?: FurniturePiece['missingCorner']
+  /** CSS grid-column/grid-row values (1-indexed lines) spanning the piece's bounding
+   * box, for `BoardGrid.vue` to place one overlay image across all of its cells. */
+  gridColumn: string
+  gridRow: string
+}
+
+/** Grid placement for every furniture piece spanning more than 1 cell (a 1-cell piece
+ * renders as a normal per-cell icon instead — see `furniturePieces()`). Deliberately
+ * takes only `puzzle`, not `Placements`: a multi-cell piece must always render in full,
+ * regardless of whether a suspect is currently standing on one of its cells. An earlier
+ * version hid the whole piece whenever any of its cells was occupied, which made a
+ * 2-3 cell rug/sofa vanish entirely just because the player was trying a guess on one
+ * of its cells — see `gridLogic.test.ts` for the regression test and
+ * docs/visual-design.md for the longer story. `BoardGrid.vue` draws the placed-suspect
+ * layer on top of these overlays, so a suspect face is never hidden by one either. */
+export function multiCellFurniturePlacements(puzzle: Pick<Puzzle, 'cells'>): MultiCellFurniturePlacement[] {
+  return furniturePieces(puzzle)
+    .filter((piece) => piece.cells.length > 1)
+    .map((piece) => ({
+      type: piece.type,
+      cells: piece.cells,
+      shape: pieceShape(piece),
+      missingCorner: piece.missingCorner,
+      gridColumn: gridLine(piece.minCol, piece.maxCol),
+      gridRow: gridLine(piece.minRow, piece.maxRow),
+    }))
 }
 
 /** The suspect adjacent to the victim in the true solution is the murderer. */
