@@ -1,7 +1,7 @@
 import sharp from 'sharp'
-import { mkdirSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import { dirname, resolve } from 'node:path'
+import {mkdirSync} from 'node:fs'
+import {fileURLToPath} from 'node:url'
+import {dirname, resolve} from 'node:path'
 
 // Relative to this script, not the project folder's name — survives a repo rename.
 const OUT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../public/sprites')
@@ -53,27 +53,36 @@ const BOOK_GRN = hex('#4fa876')
 const SOFA = hex('#6c8ebf')
 const SOFA_DK = hex('#4d6c96')
 const SOFA_LT = hex('#93b3de')
-const GLASS = hex('#bfe3f0')
-const GLASS_LT = hex('#e2f6fc')
-const FRAME = hex('#4a4038')
-const GOLD = hex('#d4af5a')
-const GOLD_DK = hex('#a5813a')
-const CANVAS_BG = hex('#ecdcc0')
 const LAMP_SHADE = hex('#e8c15a')
 const LAMP_GLOW = hex('#fff3c9')
 const LAMP_DK = hex('#b8912f')
 const TABLE = hex('#9c6b3e')
 const TABLE_DK = hex('#7a4f2c')
 const TABLE_LT = hex('#c99a68')
-const MIRROR_FRAME = hex('#b8935a')
-const MIRROR_FRAME_DK = hex('#8a6a3c')
-const MIRROR_GLASS = hex('#cfe6ea')
-const MIRROR_GLASS_LT = hex('#f0fafb')
-const CLOCK_FACE = hex('#f3ecd8')
-const CLOCK_RIM = hex('#4a4038')
 const VASE_BODY = hex('#5d8a8f')
 const VASE_DK = hex('#3f6468')
 const VASE_LT = hex('#84b3b8')
+const BED_FRAME = hex('#6b4226')
+const BLANKET = hex('#b6533f')
+const BLANKET_DK = hex('#8a3a2a')
+const PILLOW = hex('#f7f1e3')
+const PILLOW_SHADOW = hex('#ddd2ba')
+// Same wood tone as SHELF/SHELF_DK — reused rather than re-declared as a new hex value.
+const CHEST_WOOD = SHELF
+const CHEST_WOOD_DK = SHELF_DK
+const CHEST_WOOD_LT = hex('#ab7a54')
+const CHEST_METAL = hex('#8a8478')
+const CHEST_METAL_DK = hex('#5c584e')
+const PEDESTAL = hex('#a89e8c')
+const PEDESTAL_DK = hex('#7d7566')
+const PEDESTAL_LT = hex('#c4bcae')
+const MARBLE = hex('#e8e2d5')
+const MARBLE_SHADOW = hex('#c9c0ac')
+const GLOBE_OCEAN = hex('#5f8fa8')
+const GLOBE_LAND = hex('#7fa563')
+const GLOBE_LAND_DK = hex('#5c7d47')
+const GLOBE_RING = hex('#b8935a')
+const GLOBE_STAND = SHELF // same wood tone as the bookshelf/chest, reused rather than re-declared
 
 // ---- pixel canvas helpers --------------------------------------------
 function hex(c) {
@@ -471,35 +480,50 @@ async function sofaLVariants() {
   }
 }
 
-async function window_() {
+/** Bed, top-down: wood headboard peeking above (same "backrest" language as
+ * chair/sofa), a pillow, and a blanket covering the rest with a fold line for detail. */
+async function bed() {
   const c = newCanvas()
-  rect(c, 2, 2, 13, 13, FRAME)
-  rect(c, 3, 3, 7, 7, GLASS)
-  rect(c, 8, 3, 12, 7, GLASS)
-  rect(c, 3, 8, 7, 12, GLASS)
-  rect(c, 8, 8, 12, 12, GLASS)
-  rect(c, 4, 4, 5, 5, GLASS_LT)
-  rect(c, 9, 4, 10, 5, GLASS_LT)
-  rect(c, 4, 9, 5, 10, GLASS_LT)
-  rect(c, 9, 9, 10, 10, GLASS_LT)
-  rect(c, 7, 2, 8, 13, FRAME)
-  rect(c, 2, 7, 13, 8, FRAME)
+  const m = FURNITURE_MARGIN
+  const x1 = 15 - m
+  const y1 = 15 - m
+
+  rect(c, m, m, x1, m + 1, BED_FRAME) // headboard — thin, so it doesn't compete with the pillow
+  clipCorners(c, m, m, x1, m + 1, 1, { bottom: true })
+  rect(c, m + 1, m + 2, x1 - 1, m + 7, PILLOW) // pillow — big and pale, the dominant shape
+  rect(c, m + 1, m + 6, x1 - 1, m + 7, PILLOW_SHADOW)
+  clipCorners(c, m + 1, m + 2, x1 - 1, m + 7, 1)
+  rect(c, m, m + 8, x1, y1, BLANKET)
+  clipCorners(c, m, m + 8, x1, y1, 1, { top: true })
+  rect(c, m + 3, y1 - 1, x1 - 3, y1 - 1, BLANKET_DK) // one soft wrinkle, not a hard segment line
+
   center(c)
   outline(c, DARK)
-  await render(c, 'window.png')
+  await render(c, 'bed.png')
 }
 
-async function painting() {
+/** Chest/trunk, top-down: a domed lid (`bevel()` for the pseudo-3D curve), a single
+ * metal strap near the front third with a latch, and corner guards. */
+async function chest() {
   const c = newCanvas()
-  bevel(c, 2, 2, 13, 13, GOLD, GOLD, GOLD_DK)
-  rect(c, 3, 3, 12, 12, GOLD_DK)
-  rect(c, 4, 4, 11, 11, CANVAS_BG)
-  rect(c, 4, 9, 11, 9, LEAF_DK)
-  for (let x = 5; x <= 9; x++) rect(c, x, 8 - Math.abs(x - 7), x, 8, TERRACOTTA_DK)
-  circle(c, 10, 5, 1.4, GOLD)
+  const m = FURNITURE_MARGIN
+  const x1 = 15 - m
+  const y1 = 15 - m
+  const cx = Math.round((m + x1) / 2)
+
+  bevel(c, m, m, x1, y1, CHEST_WOOD, CHEST_WOOD_LT, CHEST_WOOD_DK)
+  clipCorners(c, m, m, x1, y1, 1)
+  // single strap near the front third — a real trunk's lid seam, not a full cross
+  // (a cross reads as a window/tic-tac-toe grid instead of a chest)
+  rect(c, m, y1 - 4, x1, y1 - 3, CHEST_METAL)
+  rect(c, cx - 1, y1 - 5, cx, y1 - 2, CHEST_METAL_DK) // latch, straddling the strap
+  for (const [x, y] of [[m, m], [x1 - 1, m], [m, y1 - 1], [x1 - 1, y1 - 1]]) {
+    rect(c, x, y, x + 1, y + 1, CHEST_METAL_DK) // corner guards, bigger so they actually read
+  }
+
   center(c)
   outline(c, DARK)
-  await render(c, 'painting.png')
+  await render(c, 'chest.png')
 }
 
 async function lamp() {
@@ -530,29 +554,47 @@ async function table() {
   await render(c, 'table.png')
 }
 
-async function mirror() {
+/** Statue on a pedestal, top-down: a rounded square base with a "figure" on top — a
+ * shoulder-width circle overlapped by a smaller head circle, so the silhouette reads
+ * as two stacked circles (a shape none of the other round pieces — lamp, table, globe
+ * — use, all of which are a single circle) instead of just another plain disc. */
+async function statue() {
   const c = newCanvas()
-  circle(c, 8, 7, 5, MIRROR_FRAME_DK)
-  circle(c, 8, 7, 4.2, MIRROR_FRAME)
-  circle(c, 8, 7, 3.2, MIRROR_GLASS)
-  circle(c, 6.5, 5.5, 1.3, MIRROR_GLASS_LT)
-  rect(c, 6, 12, 9, 13, MIRROR_FRAME_DK)
+  const m = FURNITURE_MARGIN
+  const x1 = 15 - m
+  const y1 = 15 - m
+
+  bevel(c, m, m, x1, y1, PEDESTAL, PEDESTAL_LT, PEDESTAL_DK)
+  clipCorners(c, m, m, x1, y1, 1)
+  circle(c, 8, 9, 3.2, MARBLE) // shoulders
+  circle(c, 9, 8, 1.4, MARBLE_SHADOW)
+  circle(c, 8, 6, 2.1, MARBLE) // head, peeking above the shoulders
+  circle(c, 8.7, 5.3, 0.9, MARBLE_SHADOW)
+
   center(c)
   outline(c, DARK)
-  await render(c, 'mirror.png')
+  await render(c, 'statue.png')
 }
 
-async function clock() {
+/** Globe on a stand, top-down: looking straight down you mostly see the sphere's top
+ * (continents scattered over ocean) ringed by the brass meridian band, with the wooden
+ * stand's foot peeking out at the bottom (1px past `FURNITURE_MARGIN`, same convention
+ * as the chair's legs and the table's). */
+async function globe() {
   const c = newCanvas()
-  circle(c, 8, 8, 5.5, CLOCK_RIM)
-  circle(c, 8, 8, 4.5, CLOCK_FACE)
-  for (const [x, y] of [[7, 2], [7, 13], [2, 7], [13, 7]]) px(c, x, y, CLOCK_RIM)
-  rect(c, 7, 5, 7, 7, CLOCK_RIM)
-  rect(c, 7, 7, 10, 7, CLOCK_RIM)
-  circle(c, 8, 8, 0.8, CLOCK_RIM)
+  const y1 = 15 - FURNITURE_MARGIN
+  const cx = 8
+
+  rect(c, cx - 2, y1 - 1, cx + 1, y1 + 1, GLOBE_STAND)
+  circle(c, 8, 8, 5.5, GLOBE_RING)
+  circle(c, 8, 8, 4.7, GLOBE_OCEAN)
+  circle(c, 6, 6, 1.6, GLOBE_LAND)
+  circle(c, 10.5, 7, 1.3, GLOBE_LAND_DK)
+  circle(c, 7.5, 10.5, 1.4, GLOBE_LAND)
+
   center(c)
   outline(c, DARK)
-  await render(c, 'clock.png')
+  await render(c, 'globe.png')
 }
 
 async function vase() {
@@ -650,12 +692,12 @@ await sofaSolo()
 await sofaPairH()
 await sofaPairV()
 await sofaLVariants()
-await window_()
-await painting()
+await bed()
+await chest()
 await lamp()
 await table()
-await mirror()
-await clock()
+await statue()
+await globe()
 await vase()
 await suspectFaces()
 await victimFace()

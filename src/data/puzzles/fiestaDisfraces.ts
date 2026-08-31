@@ -17,12 +17,12 @@ const roomGrid = [
   ['E', 'E', 'E', 'E', 'E'],
 ]
 
-const furniture: Record<string, 'sofa' | 'rug' | 'chair' | 'plant' | 'window'> = {
+const furniture: Record<string, 'sofa' | 'rug' | 'chair' | 'plant' | 'statue'> = {
   '0-0': 'sofa',
   '2-2': 'rug',
   '3-3': 'chair',
   '0-3': 'plant',
-  '1-4': 'window',
+  '1-4': 'statue',
 }
 
 const cells = roomGrid.flatMap((row, r) =>

@@ -35,7 +35,7 @@ dos *sospechosos*, solo por sala compartida.
 | Dirección | Comparación de fila o columna respecto a otro sospechoso. | "Estaba al sur de Marcus." |
 | Junto a otro | Dos sospechosos comparten sala. | "Estaba junto a Nora." |
 | Sobre mueble | La celda del sospechoso tiene ese mueble. | "Estaba sentado en una silla." |
-| Cerca de mueble | La celda del sospechoso está "junto a" una celda con ese mueble (puede negarse). | "Estaba junto a una ventana." / "No estaba junto a una ventana." |
+| Cerca de mueble | La celda del sospechoso está "junto a" una celda con ese mueble (puede negarse). | "Estaba junto a un perchero." / "No estaba junto a un perchero." |
 
 ## La víctima y el asesino
 

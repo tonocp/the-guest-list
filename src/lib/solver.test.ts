@@ -95,12 +95,12 @@ describe('rule-type correctness on a small hand-verified 3x3 fixture', () => {
 
   it('near-furniture (positive) is consistent with an elimination-forced placement', () => {
     // X and Z are pinned by unique furniture; Y is forced into the one remaining
-    // row/col by elimination — (1,1), orthogonally adjacent to the window at (1,2).
-    const cells = baseCells({ '0-0': 'sofa', '2-2': 'chair', '1-2': 'window' })
+    // row/col by elimination — (1,1), orthogonally adjacent to the bed at (1,2).
+    const cells = baseCells({ '0-0': 'sofa', '2-2': 'chair', '1-2': 'bed' })
     const rules: ClueRule[] = [
       { type: 'on-furniture', suspect: 'x', furniture: 'sofa' },
       { type: 'on-furniture', suspect: 'z', furniture: 'chair' },
-      { type: 'near-furniture', suspect: 'y', furniture: 'window' },
+      { type: 'near-furniture', suspect: 'y', furniture: 'bed' },
     ]
     const input: SolverInput = { size: 3, suspectIds: ['x', 'y', 'z'], cells, rules }
     const result = countSolutions(input, 2)
@@ -109,11 +109,11 @@ describe('rule-type correctness on a small hand-verified 3x3 fixture', () => {
   })
 
   it('near-furniture negate contradicts the same elimination-forced placement', () => {
-    const cells = baseCells({ '0-0': 'sofa', '2-2': 'chair', '1-2': 'window' })
+    const cells = baseCells({ '0-0': 'sofa', '2-2': 'chair', '1-2': 'bed' })
     const rules: ClueRule[] = [
       { type: 'on-furniture', suspect: 'x', furniture: 'sofa' },
       { type: 'on-furniture', suspect: 'z', furniture: 'chair' },
-      { type: 'near-furniture', suspect: 'y', furniture: 'window', negate: true },
+      { type: 'near-furniture', suspect: 'y', furniture: 'bed', negate: true },
     ]
     const input: SolverInput = { size: 3, suspectIds: ['x', 'y', 'z'], cells, rules }
     expect(countSolutions(input, 2).count).toBe(0)
@@ -128,7 +128,7 @@ describe('performance smoke test — 12x12, realistically shaped', () => {
   function realisticTwelve(): SolverInput {
     const size = 12
     const suspectIds = Array.from({ length: size }, (_, i) => `s${i}`)
-    const furnitureTypes = ['plant', 'rug', 'chair', 'bookshelf', 'sofa', 'window', 'painting', 'lamp'] as const
+    const furnitureTypes = ['plant', 'rug', 'chair', 'bookshelf', 'sofa', 'bed', 'chest', 'lamp'] as const
     const cells: Cell[] = []
     for (let row = 0; row < size; row++) {
       for (let col = 0; col < size; col++) cells.push({ row, col, roomId: 'R' })

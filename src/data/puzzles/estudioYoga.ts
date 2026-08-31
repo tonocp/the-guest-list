@@ -19,12 +19,12 @@ const roomGrid = [
   ['E', 'E', 'E', 'F', 'F', 'F'],
 ]
 
-const furniture: Record<string, 'sofa' | 'chair' | 'rug' | 'lamp' | 'window'> = {
+const furniture: Record<string, 'sofa' | 'chair' | 'rug' | 'lamp' | 'chest'> = {
   '0-0': 'sofa',
   '1-3': 'chair',
   '2-4': 'rug',
   '3-5': 'lamp',
-  '5-2': 'window',
+  '5-2': 'chest',
 }
 
 const cells = roomGrid.flatMap((row, r) =>
@@ -79,7 +79,7 @@ export const estudioYoga: Puzzle = {
       id: 'fabio',
       name: 'Fabio',
       gender: 'm',
-      clue: 'Estaba junto a la ventana.',
+      clue: 'Estaba sentado sobre un baúl.',
     },
   ],
   solution: {
@@ -95,6 +95,6 @@ export const estudioYoga: Puzzle = {
     { type: 'on-furniture', suspect: 'bruno', furniture: 'chair' },
     { type: 'on-furniture', suspect: 'celia', furniture: 'rug' },
     { type: 'on-furniture', suspect: 'dario', furniture: 'lamp' },
-    { type: 'on-furniture', suspect: 'fabio', furniture: 'window' },
+    { type: 'on-furniture', suspect: 'fabio', furniture: 'chest' },
   ],
 }

@@ -6,12 +6,21 @@ el estilo y el set de mobiliario.
 
 ## Cómo funciona
 
-`scripts/gen-sprites.mjs` construye cada sprite como una cuadrícula de píxeles (16×16
-para un icono de una celda; múltiplos de 16 — 32×16, 16×32, 32×32 — para una pieza de
-mobiliario multi-celda, ver más abajo), lo convierte a un buffer de píxeles RGBA crudo,
-y usa `sharp` para escalarlo x8 con interpolación `nearest` (bordes duros, sin
-difuminado) antes de guardarlo como PNG en `public/sprites/`. En la app, cada `<img>`
-de sprite lleva `image-rendering: pixelated` en CSS.
+`scripts/gen-sprites.mjs` construye cada sprite como una cuadrícula de píxeles, lo
+convierte a un buffer de píxeles RGBA crudo, y usa `sharp` para escalarlo con
+interpolación `nearest` (bordes duros, sin difuminado) antes de guardarlo como PNG en
+`public/sprites/`. En la app, cada `<img>` de sprite lleva `image-rendering: pixelated`
+en CSS.
+
+Todo se dibuja en un lienzo de 16×16 por celda (múltiplos de 16 — 32×16, 16×32, 32×32 —
+para piezas de mobiliario multi-celda) y se escala x8 (`SCALE`), sin difuminar. El
+sombreado es deliberadamente plano y simple: `bevel()` (relleno + un seam claro
+arriba/izquierda y oscuro abajo/derecha, luz desde la esquina superior izquierda en
+todas las piezas) y `clipCorners()` (recorte de 1 píxel en diagonal en vez de esquinas
+rectas). Se probó una pasada con el doble de resolución (32×32/`SCALE=4`, con esquinas
+realmente redondeadas, degradados por dithering y sombra proyectada) y se revirtió — no
+convenció como dirección visual — así que si se retoma en el futuro, es una decisión
+nueva, no una continuación de aquel intento.
 
 ## Paleta y piezas
 
@@ -25,8 +34,8 @@ de sprite lleva `image-rendering: pixelated` en CSS.
   `BoardGrid.vue`** (`w-full h-full`) — no hay un tamaño reducido especial para el
   mobiliario de una celda. El margen visible respecto al borde de la celda viene
   siempre del propio sprite: cada función generadora deja `FURNITURE_MARGIN` píxeles
-  de hueco dentro de su lienzo de 16×16 (bookshelf/window/painting ya lo hacían así
-  desde el principio; plant/lamp/table/mirror/clock/vase/chair se ajustaron a ese mismo
+  de hueco dentro de su lienzo de 16×16 (bookshelf ya lo hacía así desde el principio;
+  plant/lamp/table/vase/chair y los 4 tipos añadidos después se ajustaron a ese mismo
   margen). Antes el mobiliario de una celda se escalaba al 70% por CSS (dando un margen
   "gratis" que no tenía nada que ver con lo dibujado) mientras que las piezas
   multi-celda iban al 100% — por eso, aunque ambas usaran el mismo `FURNITURE_MARGIN`
@@ -47,6 +56,22 @@ de sprite lleva `image-rendering: pixelated` en CSS.
   oscura de respaldo con 2 tablillas claras de detalle, asiento con tapizado resaltado,
   y 4 patas que asoman por las esquinas un poco más allá del propio margen (mismo
   convenio que los brazos del sofá).
+  **Los 12 tipos son deliberadamente objetos que se leen bien en cenital.** Los
+  originales `window`/`painting`/`mirror`/`clock` eran objetos de pared vistos de
+  frente (una ventana, un cuadro colgado, un espejo, un reloj de pared) — desde
+  directamente arriba no tienen huella en el suelo, así que rompían la convención que
+  sí cumple el resto del mobiliario (silla, mesa, sofá, planta...). Se sustituyeron por
+  `bed` (cama — almohada grande y clara como forma dominante, cabecero fino para no
+  competirle protagonismo, edredón con una sola arruga suave), `chest` (baúl — tapa
+  abombada, una única correa metálica cerca del frente con candado, refuerzos en las
+  esquinas; una cruz de dos bandas se probó primero y se leía como ventana/tablero, no
+  como baúl), `globe` (globo terráqueo — esfera con continentes y el pie del soporte
+  asomando) y `statue` (estatua sobre pedestal — base de piedra con una figura clara
+  encima, cabeza y hombros como dos círculos superpuestos; sustituyó a un `coatrack`
+  inicial — un perchero visto en planta apenas tiene huella en el suelo, mismo problema
+  de fondo que los 4 originales, así que ningún dibujo de "abrigos alrededor de un
+  poste" se leía como percha). Los 12 tipos actuales: `plant`, `rug`, `chair`,
+  `bookshelf`, `sofa`, `bed`, `chest`, `lamp`, `table`, `statue`, `globe`, `vase`.
 - **Mobiliario multi-celda** (`rug`, `sofa` — ver
   [`procedural-generator.md`](./procedural-generator.md) para cómo crece su footprint):
   cada pieza de más de 1 celda se renderiza como **una sola imagen** que ocupa varias
@@ -111,6 +136,8 @@ de sprite lleva `image-rendering: pixelated` en CSS.
   En el tablero (`BoardGrid.vue`), la ficha lleva además una insignia con la inicial
   del nombre superpuesta — refuerzo de legibilidad a tamaño de celda pequeño (12×12 en
   móvil), no reemplaza a la cara.
+  Las 40 combinaciones y la cara de la víctima se pueden repasar todas a la vez en
+  `/furni` (sección "Caras de sospechosos", ver más abajo).
 - **Salas**: color plano (paleta de pastel cíclica) más textura de dither, sin sprite
   propio. Los bordes entre salas distintas se dibujan más gruesos que los internos,
   para que la forma irregular de cada sala se lea con claridad.

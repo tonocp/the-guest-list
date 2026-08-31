@@ -8,12 +8,12 @@ const FURNITURE_TYPES: FurnitureType[] = [
   'chair',
   'bookshelf',
   'sofa',
-  'window',
-  'painting',
+  'bed',
+  'chest',
   'lamp',
   'table',
-  'mirror',
-  'clock',
+  'statue',
+  'globe',
   'vase',
 ]
 

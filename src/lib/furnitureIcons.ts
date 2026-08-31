@@ -10,12 +10,12 @@ export const FURNITURE_SPRITES: Record<FurnitureType, string> = {
   chair: '/sprites/chair.png',
   bookshelf: '/sprites/bookshelf.png',
   sofa: '/sprites/sofa-solo.png',
-  window: '/sprites/window.png',
-  painting: '/sprites/painting.png',
+  bed: '/sprites/bed.png',
+  chest: '/sprites/chest.png',
   lamp: '/sprites/lamp.png',
   table: '/sprites/table.png',
-  mirror: '/sprites/mirror.png',
-  clock: '/sprites/clock.png',
+  statue: '/sprites/statue.png',
+  globe: '/sprites/globe.png',
   vase: '/sprites/vase.png',
 }
 

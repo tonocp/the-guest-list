@@ -1,7 +1,9 @@
 // Counts must match SKIN_TONES/HAIR_COLORS in scripts/gen-sprites.mjs — same
 // hand-mirrored convention as furnitureIcons.ts mirroring the furniture sprite list.
-const SKIN_COUNT = 4
-const HAIR_COUNT = 5
+// Exported so FurnitureDebugView.vue can enumerate every face combo without a second
+// hand-copied pair of these numbers.
+export const SKIN_COUNT = 4
+export const HAIR_COUNT = 5
 
 function hash(seed: string): number {
   let h = 0

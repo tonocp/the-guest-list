@@ -7,12 +7,12 @@ const FURNITURE_PHRASE: Record<FurnitureType, string> = {
   chair: 'una silla',
   bookshelf: 'una estantería',
   sofa: 'el sofá',
-  window: 'la ventana',
-  painting: 'un cuadro',
+  bed: 'la cama',
+  chest: 'un baúl',
   lamp: 'una lámpara',
   table: 'una mesa',
-  mirror: 'un espejo',
-  clock: 'un reloj',
+  statue: 'una estatua',
+  globe: 'un globo terráqueo',
   vase: 'un jarrón',
 }
 
@@ -36,18 +36,18 @@ function onFurnitureText(furniture: FurnitureType, gender: 'f' | 'm'): string {
       return 'Estaba justo al lado de la estantería.'
     case 'plant':
       return 'Estaba junto a una planta.'
-    case 'window':
-      return 'Estaba junto a la ventana.'
-    case 'painting':
-      return 'Estaba contemplando un cuadro.'
+    case 'bed':
+      return `Estaba ${gender === 'f' ? 'tumbada' : 'tumbado'} en la cama.`
+    case 'chest':
+      return `Estaba ${sentado} sobre un baúl.`
     case 'lamp':
       return 'Tenía una lámpara justo a su lado.'
     case 'table':
       return 'Estaba de pie junto a una mesa.'
-    case 'mirror':
-      return 'Estaba frente a un espejo.'
-    case 'clock':
-      return 'Estaba justo debajo de un reloj.'
+    case 'statue':
+      return 'Estaba contemplando una estatua.'
+    case 'globe':
+      return 'Estaba observando un globo terráqueo.'
     case 'vase':
       return 'Estaba junto a un jarrón.'
   }
