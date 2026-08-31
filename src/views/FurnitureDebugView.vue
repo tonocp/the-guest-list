@@ -5,21 +5,30 @@ import { CONNECTABLE_FURNITURE_SPRITES, FURNITURE_SPRITES } from '../lib/furnitu
 import { HAIR_COUNT, SKIN_COUNT, VICTIM_FACE } from '../lib/suspectFace'
 
 /** Debug-only route (`/furni`, see router/index.ts) — not linked from anywhere in the
- * app UI. Shows every furniture sprite (and every suspect face sprite) at the exact
- * size/placement BoardGrid.vue uses (`w-full h-full`, same floor-dither cell background
- * — every sprite, solo or multi-cell, is drawn at 100% of its cell and relies entirely
- * on its own baked-in `FURNITURE_MARGIN` inset for the gap to the cell edge, see
- * gen-sprites.mjs), so a visual glitch or style tweak can be checked here without
- * generating puzzles until one happens to include the right furniture/face combo.
- * Delete this file + its route once the art is settled — see AGENTS.md on not leaving
- * one-off debug scaffolding around past its usefulness. */
+ * app UI. Shows every furniture sprite a generated map can actually produce (and every
+ * suspect face sprite) at the exact size/placement BoardGrid.vue uses (`w-full h-full`,
+ * same floor-dither cell background — every sprite, solo or multi-cell, is drawn at
+ * 100% of its cell and relies entirely on its own baked-in `FURNITURE_MARGIN` inset for
+ * the gap to the cell edge, see gen-sprites.mjs), so a visual glitch or style tweak can
+ * be checked here without generating puzzles until one happens to include the right
+ * furniture/face combo. "A generated map can actually produce" excludes `bed` from the
+ * 1-cell section (see `SOLO_ONLY_TYPES`) but not from multi-cell, since `bed-h2/v2` are
+ * exactly what the generator does produce. Delete this file + its route once the art is
+ * settled — see AGENTS.md on not leaving one-off debug scaffolding past its usefulness. */
 
 const WALL_COLOR = '#3d3428'
 const DIVIDER_COLOR = 'rgba(61,52,40,0.25)'
 const ROOM_COLOR = '#dbe7f7'
 const CELL_REM = 6
 
-const FURNITURE_TYPES = Object.keys(FURNITURE_SPRITES) as FurnitureType[]
+// `bed` is excluded here even though `FURNITURE_SPRITES.bed` exists (kept for type
+// completeness and as a safety net for a possible future hand-authored puzzle) — the
+// procedural generator never actually places it at 1 cell: `assignBed` in
+// generator/furniture.ts drops `bed` from the puzzle entirely instead of falling back,
+// unlike `rug`/`sofa`, which do legitimately end up at 1 cell sometimes and so still
+// belong here. This list is "what a generated map can actually show", not "every type
+// FURNITURE_SPRITES happens to have an entry for".
+const SOLO_ONLY_TYPES = (Object.keys(FURNITURE_SPRITES) as FurnitureType[]).filter((type) => type !== 'bed')
 
 interface Swatch {
   label: string
@@ -29,7 +38,7 @@ interface Swatch {
 }
 
 const soloSwatches = computed<Swatch[]>(() =>
-  FURNITURE_TYPES.map((type) => ({ label: type, cols: 1, rows: 1, src: FURNITURE_SPRITES[type] })),
+  SOLO_ONLY_TYPES.map((type) => ({ label: type, cols: 1, rows: 1, src: FURNITURE_SPRITES[type] })),
 )
 
 const rugSprites = CONNECTABLE_FURNITURE_SPRITES.rug!

@@ -52,10 +52,15 @@ nueva, no una continuación de aquel intento.
   hueco del cuadrante vacío de la L incluido, así que centrar el bounding box real
   rompería esa colocación en vez de darle un margen.
   La silla (`chair()`) tiene el mismo lenguaje de zonas de valor que el sofá — ver más
-  abajo — en vez del respaldo-que-asoma-por-detrás de las versiones anteriores: banda
-  oscura de respaldo con 2 tablillas claras de detalle, asiento con tapizado resaltado,
-  y 4 patas que asoman por las esquinas un poco más allá del propio margen (mismo
-  convenio que los brazos del sofá).
+  abajo: asiento y respaldo con esquinas bien redondeadas (`clipCorners(..., 2)`, radio
+  mayor que en el resto del mobiliario para que la silueta se lea de una pieza en vez de
+  como una caja), 2 huecos reales en el respaldo en el tono del propio asiento — no un
+  color más claro pintado encima, que se leía como dos botones sueltos en vez de una
+  rendija — y patas en un tono claramente más oscuro que el resto (`CHAIR_SHADOW`) para
+  que no se fundan con el contorno. Se probó primero con un poste ("finial") sobresaliendo
+  en cada esquina del respaldo, inspirado en sillas de madera vistas en cenital en
+  tilesets de interiores tipo RPG — a este tamaño de lienzo se leía como dos orejas/cuernos
+  sueltos en vez de un respaldo, así que se descartó a favor de las esquinas redondeadas.
   **Los 12 tipos son deliberadamente objetos que se leen bien en cenital.** Los
   originales `window`/`painting`/`mirror`/`clock` eran objetos de pared vistos de
   frente (una ventana, un cuadro colgado, un espejo, un reloj de pared) — desde
@@ -66,7 +71,10 @@ nueva, no una continuación de aquel intento.
   multi-celda), `chest` (baúl — tapa
   abombada, una única correa metálica cerca del frente con candado, refuerzos en las
   esquinas; una cruz de dos bandas se probó primero y se leía como ventana/tablero, no
-  como baúl), `globe` (globo terráqueo — esfera con continentes y el pie del soporte
+  como baúl. El metal (`CHEST_METAL`/`_DK`/`_LT`) usa un tono azulado-frío deliberado,
+  no un gris cálido cercano al tono de la madera — con poco contraste entre ambos, la
+  correa y el candado se perdían contra el fondo de madera y el baúl se leía plano),
+  `globe` (globo terráqueo — esfera con continentes y el pie del soporte
   asomando) y `statue` (estatua sobre pedestal — base de piedra con una figura clara
   encima, cabeza y hombros como dos círculos superpuestos; sustituyó a un `coatrack`
   inicial — un perchero visto en planta apenas tiene huella en el suelo, mismo problema

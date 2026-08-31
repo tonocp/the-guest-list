@@ -43,6 +43,7 @@ const RUG_DK = hex('#9c4460')
 const CHAIR = hex('#a9714a')
 const CHAIR_DK = hex('#7d5133')
 const CHAIR_LT = hex('#c99a68')
+const CHAIR_SHADOW = hex('#5c3a24')
 const SHELF = hex('#8b5a3c')
 const SHELF_DK = hex('#5f3c24')
 const SHELF_BG = hex('#e8ddc8')
@@ -71,8 +72,9 @@ const PILLOW_SHADOW = hex('#ddd2ba')
 const CHEST_WOOD = SHELF
 const CHEST_WOOD_DK = SHELF_DK
 const CHEST_WOOD_LT = hex('#ab7a54')
-const CHEST_METAL = hex('#8a8478')
-const CHEST_METAL_DK = hex('#5c584e')
+const CHEST_METAL = hex('#7d8a9a')
+const CHEST_METAL_DK = hex('#4f5a68')
+const CHEST_METAL_LT = hex('#b8c4d0')
 const PEDESTAL = hex('#a89e8c')
 const PEDESTAL_DK = hex('#7d7566')
 const PEDESTAL_LT = hex('#c4bcae')
@@ -323,12 +325,17 @@ async function rugPairV() {
   await render(c, 'rug-pair-v.png')
 }
 
-/** Chair, top-down — same value-zone language as `sofaMotif`: a dark backrest band
- * along the top edge with 2 light slat cut-throughs for detail, a seat cushion filling
- * the rest with a small tufted highlight, and 4 legs poking past the seat's own edge at
- * the corners (splayed slightly wider than the seat, as they'd read from directly
- * above). Uses `FURNITURE_MARGIN`, same as `rugMotif`/`sofaMotif`, so all 3 furniture
- * families float the same distance off the cell edge. */
+/** Wooden dining chair, top-down: a rounded seat with a darker backrest rail across the
+ * top — rounded on its own top corners too, so the whole silhouette reads as one soft
+ * shape instead of a hard box — with 2 real gaps cut through the rail in the seat's own
+ * wood tone (not a lighter decorative stripe painted on top, which read as two buttons
+ * instead of slats), and 4 legs in their own darkest tone so they don't blend into the
+ * rail/outline. A first pass added a raised "finial" nub at each top corner (inspired by
+ * ladder-back chair references) — it broke the silhouette into disconnected floating
+ * squares instead of reading as a chair, so it's gone; the rounded rail corners do the
+ * work of making the backrest read as chair-shaped instead. Uses `FURNITURE_MARGIN`,
+ * same as `rugMotif`/`sofaMotif`, so all 3 furniture families float the same distance
+ * off the cell edge. */
 async function chair() {
   const c = newCanvas(16, 16)
   const m = FURNITURE_MARGIN
@@ -336,11 +343,14 @@ async function chair() {
   const y1 = 15 - m
 
   rect(c, m, m, x1, y1, CHAIR) // seat, base layer
-  rect(c, m, m, x1, m + 4, CHAIR_DK) // backrest
-  clipCorners(c, m, m, x1, m + 4, 1, { bottom: true })
-  rect(c, m + 3, m + 1, m + 3, m + 3, CHAIR) // backrest slats (light cut-throughs)
+  clipCorners(c, m, m, x1, y1, 2)
+
+  rect(c, m, m, x1, m + 4, CHAIR_DK) // backrest rail
+  clipCorners(c, m, m, x1, m + 4, 2, { bottom: true })
+  rect(c, m + 3, m + 1, m + 3, m + 3, CHAIR) // open slats — seat's own wood tone, real gaps not a stripe
   rect(c, x1 - 3, m + 1, x1 - 3, m + 3, CHAIR)
-  rect(c, m + 5, m + 7, x1 - 5, m + 8, CHAIR_LT) // seat tufting highlight
+
+  rect(c, m + 5, y1 - 3, x1 - 5, y1 - 3, CHAIR_LT) // seat joint/grain, subtle
 
   for (const [lx, ly] of [
     [m - 1, m + 5], // back-left leg, just below the backrest
@@ -348,7 +358,7 @@ async function chair() {
     [m - 1, y1 - 2], // front-left leg
     [x1, y1 - 2], // front-right leg
   ]) {
-    rect(c, lx, ly, lx + 1, ly + 2, CHAIR_DK)
+    rect(c, lx, ly, lx + 1, ly + 2, CHAIR_SHADOW)
   }
 
   center(c)
@@ -541,7 +551,11 @@ async function bedPairV() {
 }
 
 /** Chest/trunk, top-down: a domed lid (`bevel()` for the pseudo-3D curve), a single
- * metal strap near the front third with a latch, and corner guards. */
+ * metal strap near the front third with a latch, and corner guards. Reference chests
+ * (front-facing dungeon-crawler style) get their pop from the metal being a distinctly
+ * *cool* tone against warm wood — `CHEST_METAL` was a warm gray close in value to the
+ * wood and read as flat/washed-out; shifted to a cooler steel-blue so the straps and
+ * latch actually separate from the wood instead of blending into it. */
 async function chest() {
   const c = newCanvas()
   const m = FURNITURE_MARGIN
@@ -554,7 +568,9 @@ async function chest() {
   // single strap near the front third — a real trunk's lid seam, not a full cross
   // (a cross reads as a window/tic-tac-toe grid instead of a chest)
   rect(c, m, y1 - 4, x1, y1 - 3, CHEST_METAL)
-  rect(c, cx - 1, y1 - 5, cx, y1 - 2, CHEST_METAL_DK) // latch, straddling the strap
+  rect(c, m, y1 - 4, x1, y1 - 4, CHEST_METAL_LT) // lit edge on the strap, reads as raised metal
+  rect(c, cx - 1, y1 - 5, cx + 1, y1 - 2, CHEST_METAL_DK) // latch, straddling the strap
+  px(c, cx, y1 - 4, CHEST_METAL_LT) // keyhole glint
   for (const [x, y] of [[m, m], [x1 - 1, m], [m, y1 - 1], [x1 - 1, y1 - 1]]) {
     rect(c, x, y, x + 1, y + 1, CHEST_METAL_DK) // corner guards, bigger so they actually read
   }
@@ -575,18 +591,20 @@ async function lamp() {
   await render(c, 'lamp.png')
 }
 
-/** Round table, top-down: wood-grain rings, a runner stripe, and legs peeking out from
- * under the tabletop at the diagonals (1px past `FURNITURE_MARGIN`, same convention as
- * the chair's legs and the sofa's armrests). */
+/** Round table, top-down: a wood rim + surface, and one off-center grain knot pair (our
+ * usual light-from-top-left highlight). No legs poking past the edge, unlike
+ * chair/sofa/globe — a round tabletop typically overhangs its base (most have a single
+ * central pedestal, not 4 corner legs), so directly from above the base is fully hidden
+ * under the top; 4 legs peeking out here read more like debris on the rim than
+ * furniture. A first pass used a tight stack of same-sized rings (rim/surface/ring/
+ * surface all within ~2px of each other), which read as a mottled blob/rock instead of
+ * wood — fixed by dropping to a single rim + surface pair. */
 async function table() {
   const c = newCanvas()
-  for (const [x, y] of [[1, 1], [13, 1], [1, 13], [13, 13]]) rect(c, x, y, x + 1, y + 1, TABLE_DK)
-  circle(c, 8, 8, 5.5, TABLE_DK)
-  circle(c, 8, 8, 4.8, TABLE)
-  circle(c, 8, 8, 3.8, TABLE_DK)
-  circle(c, 8, 8, 3.2, TABLE)
-  rect(c, 4, 6, 11, 8, TABLE_LT)
-  circle(c, 6.5, 6.5, 1.6, hex('#e0c396'))
+  circle(c, 8, 8, 6, TABLE_DK) // rim
+  circle(c, 8, 8, 5.2, TABLE) // surface
+  circle(c, 6.3, 6.3, 1.4, TABLE_LT) // grain knot, lit side
+  circle(c, 10, 10, 1, TABLE_DK) // grain knot, shaded side
   center(c)
   outline(c, DARK)
   await render(c, 'table.png')
