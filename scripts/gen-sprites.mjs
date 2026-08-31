@@ -480,26 +480,64 @@ async function sofaLVariants() {
   }
 }
 
-/** Bed, top-down: wood headboard peeking above (same "backrest" language as
- * chair/sofa), a pillow, and a blanket covering the rest with a fold line for detail. */
-async function bed() {
-  const c = newCanvas()
+/** Bed, top-down: a headboard cap at one end of the run — not a strip along a whole
+ * side like `sofaMotif`'s backrest, since a real bed's headboard sits at one end of its
+ * long axis, not along its length — then a pale pillow just past it (the dominant
+ * shape) and a blanket filling the rest of the run with a soft fold line. Grows to a
+ * straight 2-cell footprint like `rug` (see `generator/furniture.ts`): a 1-cell square
+ * bed cramped headboard+pillow+blanket into a 1:1 box, when a real bed reads as a long
+ * rectangle — the 2-cell versions just let the blanket stretch to fill the extra
+ * length, everything else unchanged. `headEnd` is which end the headboard band sits on
+ * ('top' for the solo icon and the vertical pair, 'left' for the horizontal pair) —
+ * same convention as `sofaMotif`'s `backrest` parameter. */
+function bedMotif(c, headEnd) {
+  const w = c[0].length
+  const h = c.length
   const m = FURNITURE_MARGIN
-  const x1 = 15 - m
-  const y1 = 15 - m
+  const x1 = w - 1 - m
+  const y1 = h - 1 - m
 
-  rect(c, m, m, x1, m + 1, BED_FRAME) // headboard — thin, so it doesn't compete with the pillow
-  clipCorners(c, m, m, x1, m + 1, 1, { bottom: true })
-  rect(c, m + 1, m + 2, x1 - 1, m + 7, PILLOW) // pillow — big and pale, the dominant shape
-  rect(c, m + 1, m + 6, x1 - 1, m + 7, PILLOW_SHADOW)
-  clipCorners(c, m + 1, m + 2, x1 - 1, m + 7, 1)
-  rect(c, m, m + 8, x1, y1, BLANKET)
-  clipCorners(c, m, m + 8, x1, y1, 1, { top: true })
-  rect(c, m + 3, y1 - 1, x1 - 3, y1 - 1, BLANKET_DK) // one soft wrinkle, not a hard segment line
+  if (headEnd === 'top') {
+    rect(c, m, m, x1, m + 1, BED_FRAME) // headboard — thin, so it doesn't compete with the pillow
+    clipCorners(c, m, m, x1, m + 1, 1, { bottom: true })
+    rect(c, m + 1, m + 2, x1 - 1, m + 7, PILLOW) // pillow — big and pale, the dominant shape
+    rect(c, m + 1, m + 6, x1 - 1, m + 7, PILLOW_SHADOW)
+    clipCorners(c, m + 1, m + 2, x1 - 1, m + 7, 1)
+    rect(c, m, m + 8, x1, y1, BLANKET) // blanket fills the rest of the run
+    clipCorners(c, m, m + 8, x1, y1, 1, { top: true })
+    rect(c, m + 3, y1 - 1, x1 - 3, y1 - 1, BLANKET_DK) // one soft wrinkle, not a hard segment line
+  } else {
+    rect(c, m, m, m + 1, y1, BED_FRAME)
+    clipCorners(c, m, m, m + 1, y1, 1, { right: true })
+    rect(c, m + 2, m + 1, m + 7, y1 - 1, PILLOW)
+    rect(c, m + 6, m + 1, m + 7, y1 - 1, PILLOW_SHADOW)
+    clipCorners(c, m + 2, m + 1, m + 7, y1 - 1, 1)
+    rect(c, m + 8, m, x1, y1, BLANKET)
+    clipCorners(c, m + 8, m, x1, y1, 1, { left: true })
+    rect(c, x1 - 1, m + 3, x1 - 1, y1 - 3, BLANKET_DK)
+  }
+}
 
+async function bedSolo() {
+  const c = newCanvas(16, 16)
+  bedMotif(c, 'top')
   center(c)
   outline(c, DARK)
-  await render(c, 'bed.png')
+  await render(c, 'bed-solo.png')
+}
+
+async function bedPairH() {
+  const c = newCanvas(32, 16)
+  bedMotif(c, 'left')
+  outline(c, DARK)
+  await render(c, 'bed-pair-h.png')
+}
+
+async function bedPairV() {
+  const c = newCanvas(16, 32)
+  bedMotif(c, 'top')
+  outline(c, DARK)
+  await render(c, 'bed-pair-v.png')
 }
 
 /** Chest/trunk, top-down: a domed lid (`bevel()` for the pseudo-3D curve), a single
@@ -692,7 +730,9 @@ await sofaSolo()
 await sofaPairH()
 await sofaPairV()
 await sofaLVariants()
-await bed()
+await bedSolo()
+await bedPairH()
+await bedPairV()
 await chest()
 await lamp()
 await table()

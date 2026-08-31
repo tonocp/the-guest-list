@@ -62,11 +62,18 @@ Dirección de dependencia estricta: `types/` ← `lib/` ← `data/` ← `stores/
   (`(await navigator.serviceWorker.getRegistrations()).forEach(r => r.unregister())`
   + `caches.keys().then(ks => ks.forEach(k => caches.delete(k)))`) antes de seguir
   depurando.
-- **El mobiliario ya NO garantiza 1 celda por tipo**: `rug`/`sofa` pueden ocupar 2-3
-  celdas (`generator/furniture.ts`, `growRug`/`growSofa`). Quien toque
+- **El mobiliario ya NO garantiza 1 celda por tipo**: `rug`/`bed` pueden ocupar 2 celdas
+  y `sofa` hasta 3 (`generator/furniture.ts`, `growRug`/`growSofa`). Quien toque
   `BoardGrid.vue` o cualquier lógica que lea `cell.furniture` no debe asumir
   cardinalidad 1 — usar `cells.filter(c => c.furniture === type)` como ya hace
   `solver.ts`/`clueFacts.ts`, nunca "el" `Cell` de ese tipo.
+- **`bed` nunca degrada a 1 celda** (a diferencia de `rug`/`sofa`, que sí): se asigna
+  aparte en `assignBed` (`generator/furniture.ts`), antes que el resto del mobiliario,
+  y si ningún sospechoso candidato tiene hueco para 2 celdas, se descarta del todo para
+  ese caso en vez de aparecer en 1 celda — una cama de 1 celda no se lee como cama. El
+  sprite `bed-solo.png`/`FURNITURE_SPRITES.bed` se mantiene igualmente por completitud
+  de tipos (todo `FurnitureType` necesita una entrada) y como red de seguridad para un
+  futuro caso hecho a mano, pero el generador procedural nunca lo produce.
 
 ## Cómo verificar que algo sigue funcionando
 

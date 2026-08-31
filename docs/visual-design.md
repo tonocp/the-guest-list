@@ -42,7 +42,7 @@ nueva, no una continuación de aquel intento.
   en píxeles, el margen visible no coincidía. Si se añade un tipo de mueble nuevo, hay
   que dejarle ese mismo margen a mano — no hay ningún mecanismo que lo fuerce
   automáticamente.
-  Los 12 iconos de una sola celda (incluidos `rug-solo`/`sofa-solo`) pasan además por
+  Los 12 iconos de una sola celda (incluidos `rug-solo`/`bed-solo`/`sofa-solo`) pasan además por
   `center()` justo antes de `outline()`: calcula la caja delimitadora real de lo
   dibujado y desplaza el contenido para que quede centrada en el lienzo, en vez de
   depender de que las coordenadas a mano ya salgan simétricas (con formas irregulares
@@ -62,7 +62,8 @@ nueva, no una continuación de aquel intento.
   directamente arriba no tienen huella en el suelo, así que rompían la convención que
   sí cumple el resto del mobiliario (silla, mesa, sofá, planta...). Se sustituyeron por
   `bed` (cama — almohada grande y clara como forma dominante, cabecero fino para no
-  competirle protagonismo, edredón con una sola arruga suave), `chest` (baúl — tapa
+  competirle protagonismo, edredón con una sola arruga suave; ver más abajo por qué es
+  multi-celda), `chest` (baúl — tapa
   abombada, una única correa metálica cerca del frente con candado, refuerzos en las
   esquinas; una cruz de dos bandas se probó primero y se leía como ventana/tablero, no
   como baúl), `globe` (globo terráqueo — esfera con continentes y el pie del soporte
@@ -72,7 +73,7 @@ nueva, no una continuación de aquel intento.
   de fondo que los 4 originales, así que ningún dibujo de "abrigos alrededor de un
   poste" se leía como percha). Los 12 tipos actuales: `plant`, `rug`, `chair`,
   `bookshelf`, `sofa`, `bed`, `chest`, `lamp`, `table`, `statue`, `globe`, `vase`.
-- **Mobiliario multi-celda** (`rug`, `sofa` — ver
+- **Mobiliario multi-celda** (`rug`, `bed`, `sofa` — ver
   [`procedural-generator.md`](./procedural-generator.md) para cómo crece su footprint):
   cada pieza de más de 1 celda se renderiza como **una sola imagen** que ocupa varias
   celdas del grid (`gridColumn`/`gridRow` en `BoardGrid.vue`), no como un icono
@@ -84,15 +85,19 @@ nueva, no una continuación de aquel intento.
   "el respaldo siempre arriba") se rompe al rotar 180° para el extremo opuesto de una
   tirada recta, porque rotar 180° también voltea arriba↔abajo. La pieza deja de
   fusionarse en cuanto cualquiera de las dos falla. Por eso ahora cada pieza multi-celda
-  es un único bitmap ensamblado en `gen-sprites.mjs`: `rugMotif`/`sofaMotif` dibujan
-  directamente en un lienzo del tamaño final para las formas rectas (`rug-pair-h/v`,
-  `sofa-pair-h/v`); la pieza en L del sofá no es un rectángulo, así que se ensambla en
+  es un único bitmap ensamblado en `gen-sprites.mjs`: `rugMotif`/`bedMotif`/`sofaMotif`
+  dibujan directamente en un lienzo del tamaño final para las formas rectas (`rug-pair-h/v`,
+  `bed-pair-h/v`, `sofa-pair-h/v`); la pieza en L del sofá no es un rectángulo, así que se ensambla en
   `sofaLMotif()` — no hay ninguna costura de la que depender en ningún caso.
   `furniturePieces()`/`pieceShape()` en `gridLogic.ts` agrupan las celdas de un mismo
   tipo (cada `FurnitureType` aparece como mucho una vez por caso, así que agrupar por
   tipo basta, sin metadato extra en `Puzzle`) y calculan el bounding box. Una pieza que
   se quedó en 1 celda (footprint bloqueado, ver `growRug`/`growSofa`) usa el icono
-  normal de una sola celda, igual que cualquier otro mueble.
+  normal de una sola celda, igual que cualquier otro mueble — excepto `bed`, que nunca
+  se queda en 1 celda: si no encuentra hueco para 2, se descarta del caso en vez de
+  aparecer así (ver `assignBed` en `generator/furniture.ts` y `for-agents.md`).
+  `bed-solo.png` sigue existiendo por completitud de `FurnitureType`, no porque el
+  generador vaya a usarlo.
   **Las 4 orientaciones de la L también son 4 bitmaps distintos, no una rotación CSS**:
   `sofaLMotif()` dibuja solo la orientación canónica (esquina arriba-izda, hueco
   abajo-dcha) con un respaldo genuinamente asimétrico (banda solo en el borde
@@ -103,6 +108,18 @@ nueva, no una continuación de aquel intento.
   cualquier asimetría correctamente. `pieceShape()` + `FurniturePiece.missingCorner`
   le dicen a `BoardGrid.vue` qué de los 4 ficheros usar — sin ningún `rotate()` en
   tiempo de render.
+  **`bed` se hizo multi-celda porque una cama real es alargada, no cuadrada** — a 1
+  celda, cabecero+almohada+edredón quedaban apretados en una caja 1:1; en 2 celdas el
+  edredón simplemente se estira para llenar el largo extra, todo lo demás igual (ver
+  `bedMotif()`). No necesita forma en L (una cama en esquina no tiene sentido real, a
+  diferencia de un sofá de esquina), así que crece igual que `rug` — con una diferencia
+  importante: no hereda la caída a 1 celda de `rug`, porque a 1 celda deja de leerse
+  como cama; si no encuentra hueco para 2, se descarta en vez de degradar (ver arriba).
+  Su cabecero es un
+  tope en un extremo del recorrido, no una banda a lo largo de todo un lado como el
+  respaldo de `sofaMotif` — por eso su parámetro de orientación se llama `headEnd`
+  (`'top'`/`'left'`) en vez de `backrest`, aunque sigue el mismo convenio de qué
+  extremo/lado usa cada pieza (`bedSolo`/`bedPairV` → `'top'`, `bedPairH` → `'left'`).
   Cada pieza multi-celda deja el mismo margen pequeño y constante que el resto del
   mobiliario (`FURNITURE_MARGIN` en `gen-sprites.mjs`, medido en píxeles del lienzo, no
   proporcional al tamaño de la pieza) respecto al borde de su propia celda — para que

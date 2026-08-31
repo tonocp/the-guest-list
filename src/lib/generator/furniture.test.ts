@@ -125,13 +125,13 @@ describe('assignFurniture', () => {
     }
   })
 
-  it('always gives non-rug/sofa types exactly 1 cell', () => {
+  it('always gives non-rug/bed/sofa types exactly 1 cell', () => {
     const ids = ['s0', 's1', 's2', 's3', 's4']
     const solution = solutionFor(ids)
     const placements = assignFurniture(ids, solution, roomIdByCell, size, createRng(7))
 
     for (const placement of placements) {
-      if (placement.type !== 'rug' && placement.type !== 'sofa') {
+      if (placement.type !== 'rug' && placement.type !== 'bed' && placement.type !== 'sofa') {
         expect(placement.cells.length).toBe(1)
       }
     }
@@ -152,8 +152,23 @@ describe('assignFurniture', () => {
     )
     const solution = { s0: { row: 0, col: 0 } }
 
-    expect(() => assignFurniture(ids, solution, tinyRoomGrid, size, createRng(3))).not.toThrow()
-    const [placement] = assignFurniture(ids, solution, tinyRoomGrid, size, createRng(3))
+    // seed 0 happens to assign a non-rug/bed/sofa type here, which always stays 1 cell
+    expect(() => assignFurniture(ids, solution, tinyRoomGrid, size, createRng(0))).not.toThrow()
+    const [placement] = assignFurniture(ids, solution, tinyRoomGrid, size, createRng(0))
     expect(placement.cells).toEqual([{ row: 0, col: 0 }])
+  })
+
+  it('drops bed instead of placing it at 1 cell when it can\'t grow', () => {
+    const ids = ['s0']
+    const tinyRoomGrid: string[][] = Array.from({ length: size }, (_, row) =>
+      Array.from({ length: size }, (_, col) => (row === 0 && col === 0 ? 'room-tiny' : 'room-rest')),
+    )
+    const solution = { s0: { row: 0, col: 0 } }
+
+    // seed 3 happens to assign `bed` to the only suspect, boxed into a 1-cell room —
+    // unlike rug/sofa, bed must never fall back to a 1-cell placement (see
+    // `assignBed`), so this suspect should end up with no furniture at all.
+    const placements = assignFurniture(ids, solution, tinyRoomGrid, size, createRng(3))
+    expect(placements).toEqual([])
   })
 })

@@ -33,11 +33,14 @@ const soloSwatches = computed<Swatch[]>(() =>
 )
 
 const rugSprites = CONNECTABLE_FURNITURE_SPRITES.rug!
+const bedSprites = CONNECTABLE_FURNITURE_SPRITES.bed!
 const sofaSprites = CONNECTABLE_FURNITURE_SPRITES.sofa!
 
 const multiCellSwatches: Swatch[] = [
   { label: 'rug — h2', cols: 2, rows: 1, src: rugSprites.h2 },
   { label: 'rug — v2', cols: 1, rows: 2, src: rugSprites.v2 },
+  { label: 'bed — h2', cols: 2, rows: 1, src: bedSprites.h2 },
+  { label: 'bed — v2', cols: 1, rows: 2, src: bedSprites.v2 },
   { label: 'sofa — h2', cols: 2, rows: 1, src: sofaSprites.h2 },
   { label: 'sofa — v2', cols: 1, rows: 2, src: sofaSprites.v2 },
   { label: 'sofa — L (falta arriba-izda)', cols: 2, rows: 2, src: sofaSprites.L!.topLeft },
