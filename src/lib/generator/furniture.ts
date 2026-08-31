@@ -6,7 +6,7 @@ const FURNITURE_TYPES: FurnitureType[] = [
   'plant',
   'rug',
   'chair',
-  'bookshelf',
+  'piano',
   'sofa',
   'bed',
   'chest',
@@ -15,6 +15,7 @@ const FURNITURE_TYPES: FurnitureType[] = [
   'statue',
   'globe',
   'vase',
+  'screen',
 ]
 
 export interface FurniturePlacement {
@@ -76,61 +77,81 @@ export function growSofa(anchor: Position, ctx: GrowthCtx, rng: RNG): Position[]
   return growRug(anchor, ctx, rng)
 }
 
+/** Straight 3-cell footprint (the folding screen's 3 panels in a row) — same 4
+ * directions as `growRug`, just extended one more cell in the same direction; falls
+ * back to a straight 2-cell run, then the anchor alone, if a full 3-run doesn't fit.
+ * Unlike `bed`/`piano` (see `MUST_GROW_TYPES`), a screen degrades gracefully: even a
+ * single panel is a real, recognizable object (a lone room-divider panel), not a
+ * contradiction the way a 1-cell bed or piano is. */
+export function growScreen(anchor: Position, ctx: GrowthCtx, rng: RNG): Position[] {
+  for (const dir of shuffle(rng, RUG_DIRECTIONS)) {
+    const mid = { row: anchor.row + dir.row, col: anchor.col + dir.col }
+    const far = { row: anchor.row + dir.row * 2, col: anchor.col + dir.col * 2 }
+    if (isValidExtra(mid, anchor, ctx) && isValidExtra(far, anchor, ctx)) return [anchor, mid, far]
+  }
+  return growRug(anchor, ctx, rng)
+}
+
 function growFootprint(type: FurnitureType, anchor: Position, ctx: GrowthCtx, rng: RNG): Position[] {
   if (type === 'rug') return growRug(anchor, ctx, rng)
   if (type === 'sofa') return growSofa(anchor, ctx, rng)
+  if (type === 'screen') return growScreen(anchor, ctx, rng)
   return [anchor]
 }
 
-interface Assignment {
-  suspectId: string
-  type: FurnitureType
-}
-
-/** `bed` must always end up 2 cells (a real bed is long, not square — see
- * gen-sprites.mjs `bedMotif`), unlike `rug`/`sofa` which tolerate falling back to fewer
- * cells. Tries every other assignment in turn until one has room for a straight 2-cell
- * footprint, then **swaps types in place**: that suspect takes over `bed` (already
- * grown), and the original `bed` slot keeps whatever type the swap partner would
- * otherwise have gotten — so `assignments` stays the same length and correctly paired
- * throughout, no separate suspect/type lists to keep in sync. Returns the index that's
- * already been grown and placed, so the caller's generic loop can skip it. If nobody
- * has room, drops the `bed` assignment entirely instead of placing it at 1 cell —
- * mutates `assignments` and `ctx.usedCells` in place either way. */
-function assignBed(
-  assignments: Assignment[],
+/** `bed` and `piano` must always end up 2 cells — a real bed or grand piano is long,
+ * never square (see gen-sprites.mjs `bedMotif`/`pianoMotif`) — unlike `rug`/`sofa`/
+ * `screen`, which tolerate falling back to fewer cells because a 1-cell rug, sofa
+ * armchair, or single screen panel is still a real, recognizable object on its own.
+ * Tries every remaining suspect in turn until one has room for a straight 2-cell
+ * footprint; that suspect is placed immediately and removed from `remainingSuspects`
+ * for good (never reconsidered by a later call for a different must-grow type — an
+ * earlier version swapped types between assignments in place instead of removing the
+ * grower outright, which let the same suspect's already-used-up growth get attributed
+ * to *two* types when a second must-grow call reused them, producing two same-type
+ * placements built from unrelated anchors; see the regression test). If nobody has
+ * room, the type is simply not placed — it was already dropped from `remainingTypes`
+ * by the caller before this runs, so that's the end of it, no 1-cell fallback. Mutates
+ * `remainingSuspects` and `ctx.usedCells` in place; returns the placement if one was
+ * made. */
+function assignMustGrow(
+  type: FurnitureType,
+  remainingSuspects: string[],
   solution: Record<string, Position>,
   ctx: GrowthCtx,
   rng: RNG,
-): { placement: FurniturePlacement; handledIndex: number } | null {
-  const bedIndex = assignments.findIndex((a) => a.type === 'bed')
-  if (bedIndex === -1) return null
-
-  for (let i = 0; i < assignments.length; i++) {
-    if (i === bedIndex) continue
-    const suspectId = assignments[i].suspectId
+): FurniturePlacement | null {
+  for (let i = 0; i < remainingSuspects.length; i++) {
+    const suspectId = remainingSuspects[i]
     const cells = growRug(solution[suspectId], ctx, rng)
     if (cells.length !== 2) continue
     for (const p of cells) ctx.usedCells.add(cellKey(p.row, p.col))
-    assignments[bedIndex].type = assignments[i].type
-    assignments[i] = { suspectId, type: 'bed' }
-    return { placement: { suspectId, type: 'bed', cells }, handledIndex: i }
+    remainingSuspects.splice(i, 1)
+    return { suspectId, type, cells }
   }
-  assignments.splice(bedIndex, 1)
   return null
 }
 
+export const MUST_GROW_TYPES: FurnitureType[] = ['bed', 'piano']
+
 /** Gives up to one unique furniture item per non-victim suspect, anchored at their own
- * solution cell. 12 types exist — enough to cover every non-victim suspect even at
+ * solution cell. 13 types exist — enough to cover every non-victim suspect even at
  * "experto" (12x12, 11 non-victim suspects); the margin exists because a `room` fact
  * alone was measured to be unreliable at fully pinning the couple of suspects
  * furniture doesn't reach (see the generator design notes on why unary facts are
  * preferred over chains of `direction`/`adjacent`).
  *
- * `rug`/`sofa` grow beyond their anchor into 1-2 extra cells within the same room
- * (straight for rug, L-shaped/corner for sofa) — every other type stays 1 cell. `bed`
- * is the exception: see `assignBed`, which runs first and may drop it from this puzzle
- * entirely rather than ever placing it at 1 cell. */
+ * `rug`/`sofa`/`screen` grow beyond their anchor into extra cells within the same room
+ * (straight for rug/screen, L-shaped/corner for sofa) — every other type stays 1 cell.
+ * `bed`/`piano` are the exception: see `assignMustGrow`, which runs first for each and
+ * may drop it from this puzzle entirely rather than ever placing it at 1 cell.
+ *
+ * The two pools below (`remainingSuspects`/`remainingTypes`) can end up different
+ * lengths — a dropped must-grow type removes a type but not a suspect — so the final
+ * pairing loop uses whichever is shorter and leaves any leftover suspect with no
+ * furniture at all. That's not a bug to route around: "up to one item per suspect" was
+ * already the contract (see above), so a suspect ending up with none is an accepted
+ * outcome, not a broken invariant. */
 export function assignFurniture(
   nonVictimSuspectIds: string[],
   solution: Record<string, Position>,
@@ -139,9 +160,8 @@ export function assignFurniture(
   rng: RNG,
 ): FurniturePlacement[] {
   const count = Math.min(FURNITURE_TYPES.length, nonVictimSuspectIds.length)
-  const chosenSuspects = shuffle(rng, nonVictimSuspectIds).slice(0, count)
-  const chosenTypes = shuffle(rng, FURNITURE_TYPES).slice(0, count)
-  const assignments: Assignment[] = chosenSuspects.map((suspectId, i) => ({ suspectId, type: chosenTypes[i] }))
+  const remainingSuspects = shuffle(rng, nonVictimSuspectIds).slice(0, count)
+  const remainingTypes = shuffle(rng, FURNITURE_TYPES).slice(0, count)
 
   const ctx: GrowthCtx = {
     roomIdAt: (p) => roomIdByCell[p.row][p.col],
@@ -151,12 +171,17 @@ export function assignFurniture(
   }
 
   const placements: FurniturePlacement[] = []
-  const bedResult = assignBed(assignments, solution, ctx, rng)
-  if (bedResult) placements.push(bedResult.placement)
+  for (const type of MUST_GROW_TYPES) {
+    const typeIndex = remainingTypes.indexOf(type)
+    if (typeIndex === -1) continue
+    remainingTypes.splice(typeIndex, 1)
+    const placement = assignMustGrow(type, remainingSuspects, solution, ctx, rng)
+    if (placement) placements.push(placement)
+  }
 
-  for (let i = 0; i < assignments.length; i++) {
-    if (bedResult?.handledIndex === i) continue
-    const { suspectId, type } = assignments[i]
+  for (let i = 0; i < Math.min(remainingSuspects.length, remainingTypes.length); i++) {
+    const suspectId = remainingSuspects[i]
+    const type = remainingTypes[i]
     const anchor = solution[suspectId]
     const cells = growFootprint(type, anchor, ctx, rng)
     for (const p of cells) ctx.usedCells.add(cellKey(p.row, p.col))

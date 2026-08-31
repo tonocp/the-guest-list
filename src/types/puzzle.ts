@@ -2,7 +2,7 @@ export type FurnitureType =
   | 'plant'
   | 'rug'
   | 'chair'
-  | 'bookshelf'
+  | 'piano'
   | 'sofa'
   | 'bed'
   | 'chest'
@@ -11,6 +11,7 @@ export type FurnitureType =
   | 'statue'
   | 'globe'
   | 'vase'
+  | 'screen'
 
 export type Difficulty = 'muy-facil' | 'facil' | 'medio' | 'dificil' | 'experto'
 

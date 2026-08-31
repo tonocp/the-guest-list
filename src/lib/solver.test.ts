@@ -128,7 +128,7 @@ describe('performance smoke test — 12x12, realistically shaped', () => {
   function realisticTwelve(): SolverInput {
     const size = 12
     const suspectIds = Array.from({ length: size }, (_, i) => `s${i}`)
-    const furnitureTypes = ['plant', 'rug', 'chair', 'bookshelf', 'sofa', 'bed', 'chest', 'lamp'] as const
+    const furnitureTypes = ['plant', 'rug', 'chair', 'piano', 'sofa', 'bed', 'chest', 'lamp'] as const
     const cells: Cell[] = []
     for (let row = 0; row < size; row++) {
       for (let col = 0; col < size; col++) cells.push({ row, col, roomId: 'R' })

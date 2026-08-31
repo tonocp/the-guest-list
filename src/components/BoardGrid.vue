@@ -63,12 +63,13 @@ const multiCellPlacements = computed(() => multiCellFurniturePlacements(props.pu
 const multiCellPieces = computed(() => {
   return multiCellPlacements.value.map((piece) => {
     const sprites = CONNECTABLE_FURNITURE_SPRITES[piece.type]
-    // multiCellFurniturePlacements only ever produces 'h2'/'v2'/'L' (it filters out
-    // 1-cell pieces), so 'single' never reaches here — the cast just tells TS that.
+    // multiCellFurniturePlacements only ever produces 'h2'/'v2'/'h3'/'v3'/'L' (it
+    // filters out 1-cell pieces), so 'single' never reaches here — the cast just tells
+    // TS that.
     const src =
       piece.shape === 'L'
         ? (sprites?.L?.[piece.missingCorner!] ?? FURNITURE_SPRITES[piece.type])
-        : (sprites?.[piece.shape as 'h2' | 'v2'] ?? FURNITURE_SPRITES[piece.type])
+        : (sprites?.[piece.shape as 'h2' | 'v2' | 'h3' | 'v3'] ?? FURNITURE_SPRITES[piece.type])
     return {
       key: `${piece.type}-${piece.cells[0].row}-${piece.cells[0].col}`,
       src,

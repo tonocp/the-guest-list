@@ -61,17 +61,20 @@ tenga **exactamente 2** ocupantes — necesario para que el asesino quede bien d
 
 ## Mobiliario y pistas
 
-Hasta una instancia única de cada tipo de mobiliario (12 tipos), anclada en la celda
-de un sospechoso no-víctima distinto cada vez. `rug`, `bed` y `sofa` pueden extenderse
-1-2 celdas más allá de su ancla dentro de la misma sala (`rug`/`bed` en línea recta,
-`sofa` en forma de L/esquina) — el resto de tipos siguen ocupando exactamente 1 celda.
-`rug`/`sofa` degradan con elegancia si no encuentran hueco (`sofa` cae a recta y luego
-a 1 celda; `rug` cae directo a 1 celda) porque una alfombra o un sofá de 1 celda siguen
-siendo un mueble creíble. `bed` no: una cama de 1 celda no se lee como cama (ver
-`docs/visual-design.md`), así que en vez de degradar se asigna aparte, antes que el
-resto (`assignBed` en `generator/furniture.ts`), probando cada sospechoso candidato
-hasta encontrar uno con hueco para 2 celdas; si ninguno lo tiene, `bed` se descarta
-del todo para ese caso en vez de aparecer en 1 celda. Cada sospechoso muestra como mucho una
+Hasta una instancia única de cada tipo de mobiliario (13 tipos), anclada en la celda
+de un sospechoso no-víctima distinto cada vez. `rug`, `bed`, `piano`, `sofa` y `screen`
+pueden extenderse más allá de su ancla dentro de la misma sala (`rug`/`bed`/`piano` en
+línea recta hasta 2 celdas, `screen` en línea recta hasta 3, `sofa` en forma de
+L/esquina hasta 3) — el resto de tipos siguen ocupando exactamente 1 celda.
+`rug`/`sofa`/`screen` degradan con elegancia si no encuentran hueco (`sofa` cae a recta
+y luego a 1 celda; `rug`/`screen` caen directo a footprints más pequeños) porque una
+alfombra, un sofá o un solo panel de biombo siguen siendo un mueble creíble. `bed`/
+`piano` no: una cama o un piano de 1 celda no se leen como tales (ver
+`docs/visual-design.md`), así que en vez de degradar se asignan aparte, antes que el
+resto (`assignMustGrow` en `generator/furniture.ts`, una vez por cada tipo en
+`MUST_GROW_TYPES`), probando cada sospechoso candidato hasta encontrar uno con hueco
+para 2 celdas; si ninguno lo tiene, ese tipo se descarta del todo para ese caso en vez
+de aparecer en 1 celda. Cada sospechoso muestra como mucho una
 pista (`Suspect.clue` es un único string): se le da su hecho unario más fuerte
 disponible (`on-furniture` > `room` > `near-furniture`), y luego se minimiza el
 conjunto quitando reglas mientras la solución siga siendo única.
@@ -80,8 +83,9 @@ conjunto quitando reglas mientras la solución siga siendo única.
 
 - Los casos generados solo usan pistas de sala/mobiliario — nunca `direction` o
   `adjacent` (los casos hechos a mano sí las usan, con más variedad narrativa).
-- Solo `rug`/`bed`/`sofa` ocupan más de una celda; el resto sigue anclado a 1 celda.
-  Ampliar esto a más tipos, o a formas más variadas, es trabajo futuro.
+- Solo `rug`/`bed`/`piano`/`sofa`/`screen` ocupan más de una celda; el resto sigue
+  anclado a 1 celda. Ampliar esto a más tipos, o a formas más variadas, es trabajo
+  futuro.
 - El solver garantiza unicidad matemática de la solución, no que sea resoluble sin
   tanteo en algún punto.
 

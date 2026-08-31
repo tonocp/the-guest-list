@@ -24,7 +24,7 @@ nueva, no una continuación de aquel intento.
 
 ## Paleta y piezas
 
-- **Mobiliario** (12 tipos, ver `FurnitureType` en `src/types/puzzle.ts`): cada uno
+- **Mobiliario** (13 tipos, ver `FurnitureType` en `src/types/puzzle.ts`): cada uno
   con su propia función generadora, entrada en `furnitureIcons.ts` y frase de pista en
   `clueText.ts`. El sombreado sigue un modelo consistente en todas las piezas — luz
   desde arriba-izquierda (`bevel()` en `gen-sprites.mjs`: seam claro en los bordes
@@ -34,15 +34,13 @@ nueva, no una continuación de aquel intento.
   `BoardGrid.vue`** (`w-full h-full`) — no hay un tamaño reducido especial para el
   mobiliario de una celda. El margen visible respecto al borde de la celda viene
   siempre del propio sprite: cada función generadora deja `FURNITURE_MARGIN` píxeles
-  de hueco dentro de su lienzo de 16×16 (bookshelf ya lo hacía así desde el principio;
-  plant/lamp/table/vase/chair y los 4 tipos añadidos después se ajustaron a ese mismo
-  margen). Antes el mobiliario de una celda se escalaba al 70% por CSS (dando un margen
-  "gratis" que no tenía nada que ver con lo dibujado) mientras que las piezas
-  multi-celda iban al 100% — por eso, aunque ambas usaran el mismo `FURNITURE_MARGIN`
-  en píxeles, el margen visible no coincidía. Si se añade un tipo de mueble nuevo, hay
-  que dejarle ese mismo margen a mano — no hay ningún mecanismo que lo fuerce
-  automáticamente.
-  Los 12 iconos de una sola celda (incluidos `rug-solo`/`bed-solo`/`sofa-solo`) pasan además por
+  de hueco dentro de su lienzo de 16×16. Antes el mobiliario de una celda se escalaba
+  al 70% por CSS (dando un margen "gratis" que no tenía nada que ver con lo dibujado)
+  mientras que las piezas multi-celda iban al 100% — por eso, aunque ambas usaran el
+  mismo `FURNITURE_MARGIN` en píxeles, el margen visible no coincidía. Si se añade un
+  tipo de mueble nuevo, hay que dejarle ese mismo margen a mano — no hay ningún
+  mecanismo que lo fuerce automáticamente.
+  Los 13 iconos de una sola celda (incluidos `rug-solo`/`bed-solo`/`sofa-solo`) pasan además por
   `center()` justo antes de `outline()`: calcula la caja delimitadora real de lo
   dibujado y desplaza el contenido para que quede centrada en el lienzo, en vez de
   depender de que las coordenadas a mano ya salgan simétricas (con formas irregulares
@@ -61,7 +59,7 @@ nueva, no una continuación de aquel intento.
   en cada esquina del respaldo, inspirado en sillas de madera vistas en cenital en
   tilesets de interiores tipo RPG — a este tamaño de lienzo se leía como dos orejas/cuernos
   sueltos en vez de un respaldo, así que se descartó a favor de las esquinas redondeadas.
-  **Los 12 tipos son deliberadamente objetos que se leen bien en cenital.** Los
+  **Los 13 tipos son deliberadamente objetos que se leen bien en cenital.** Los
   originales `window`/`painting`/`mirror`/`clock` eran objetos de pared vistos de
   frente (una ventana, un cuadro colgado, un espejo, un reloj de pared) — desde
   directamente arriba no tienen huella en el suelo, así que rompían la convención que
@@ -79,11 +77,25 @@ nueva, no una continuación de aquel intento.
   encima, cabeza y hombros como dos círculos superpuestos; sustituyó a un `coatrack`
   inicial — un perchero visto en planta apenas tiene huella en el suelo, mismo problema
   de fondo que los 4 originales, así que ningún dibujo de "abrigos alrededor de un
-  poste" se leía como percha). Los 12 tipos actuales: `plant`, `rug`, `chair`,
-  `bookshelf`, `sofa`, `bed`, `chest`, `lamp`, `table`, `statue`, `globe`, `vase`.
-- **Mobiliario multi-celda** (`rug`, `bed`, `sofa` — ver
+  poste" se leía como percha).
+  **`bookshelf` cayó por el mismo motivo, más tarde**: no es un mueble de pared, así que
+  sí tiene huella en el suelo, pero lo único que la hace reconocible (los libros, las
+  baldas) está en la cara frontal vertical, invisible en cenital — desde arriba solo se
+  ve la tapa lisa del mueble. Cambiar la perspectiva solo para esta pieza habría roto la
+  consistencia que se acababa de conseguir con la sustitución anterior; cambiar la
+  perspectiva de todo el juego era un rediseño mucho mayor de lo que el problema
+  justificaba. Se sustituyó por `piano` (piano de cola — la silueta en planta de un
+  piano de cola real, teclado plano en un extremo y cuerpo curvo tipo "ala" en el otro,
+  es exactamente su contorno visto desde arriba; de los pocos muebles del set cuya forma
+  cenital por sí sola ya lo hace reconocible) y, como añadido aparte (no sustituto de
+  nada), `screen` (biombo — varios paneles independientes con bisagra visible entre
+  ellos, en vez de un único bitmap continuo como el resto del mobiliario multi-celda;
+  ver más abajo). Los 13 tipos actuales: `plant`, `rug`, `chair`, `piano`, `sofa`, `bed`,
+  `chest`, `lamp`, `table`, `statue`, `globe`, `vase`, `screen`.
+- **Mobiliario multi-celda** (`rug`, `bed`, `piano`, `sofa`, `screen` — ver
   [`procedural-generator.md`](./procedural-generator.md) para cómo crece su footprint):
-  cada pieza de más de 1 celda se renderiza como **una sola imagen** que ocupa varias
+  salvo `screen` (ver más abajo), cada pieza de más de 1 celda se renderiza como **una
+  sola imagen** que ocupa varias
   celdas del grid (`gridColumn`/`gridRow` en `BoardGrid.vue`), no como un icono
   independiente por celda. La primera versión intentó lo segundo — dos tiles de 16×16
   rotados por CSS para que sus bordes "encajaran" — y tenía dos problemas de raíz
@@ -93,19 +105,31 @@ nueva, no una continuación de aquel intento.
   "el respaldo siempre arriba") se rompe al rotar 180° para el extremo opuesto de una
   tirada recta, porque rotar 180° también voltea arriba↔abajo. La pieza deja de
   fusionarse en cuanto cualquiera de las dos falla. Por eso ahora cada pieza multi-celda
-  es un único bitmap ensamblado en `gen-sprites.mjs`: `rugMotif`/`bedMotif`/`sofaMotif`
-  dibujan directamente en un lienzo del tamaño final para las formas rectas (`rug-pair-h/v`,
-  `bed-pair-h/v`, `sofa-pair-h/v`); la pieza en L del sofá no es un rectángulo, así que se ensambla en
+  (excepto `screen`, ver más abajo) es un único bitmap ensamblado en `gen-sprites.mjs`:
+  `rugMotif`/`bedMotif`/`pianoMotif`/`sofaMotif` dibujan directamente en un lienzo del
+  tamaño final para las formas rectas (`rug-pair-h/v`, `bed-pair-h/v`, `piano-pair-h/v`,
+  `sofa-pair-h/v`); la pieza en L del sofá no es un rectángulo, así que se ensambla en
   `sofaLMotif()` — no hay ninguna costura de la que depender en ningún caso.
   `furniturePieces()`/`pieceShape()` en `gridLogic.ts` agrupan las celdas de un mismo
   tipo (cada `FurnitureType` aparece como mucho una vez por caso, así que agrupar por
   tipo basta, sin metadato extra en `Puzzle`) y calculan el bounding box. Una pieza que
-  se quedó en 1 celda (footprint bloqueado, ver `growRug`/`growSofa`) usa el icono
-  normal de una sola celda, igual que cualquier otro mueble — excepto `bed`, que nunca
-  se queda en 1 celda: si no encuentra hueco para 2, se descarta del caso en vez de
-  aparecer así (ver `assignBed` en `generator/furniture.ts` y `for-agents.md`).
-  `bed-solo.png` sigue existiendo por completitud de `FurnitureType`, no porque el
-  generador vaya a usarlo.
+  se quedó en 1 celda (footprint bloqueado, ver `growRug`/`growSofa`/`growScreen`) usa
+  el icono normal de una sola celda, igual que cualquier otro mueble — excepto
+  `bed`/`piano`, que nunca se quedan en 1 celda: si no encuentran hueco para 2, se
+  descartan del caso en vez de aparecer así (ver `assignMustGrow` en
+  `generator/furniture.ts` y `for-agents.md`). `bed-solo.png`/`piano-solo.png` siguen
+  existiendo por completitud de `FurnitureType`, no porque el generador vaya a usarlos.
+  **Trampa ya sufrida al generalizar esto de `bed` a `bed`+`piano`**: la primera versión
+  de `assignMustGrow` reasignaba el `type` entre sospechosos ya emparejados en vez de
+  sacar al sospechoso que de verdad creció del grupo restante — si el mismo sospechoso
+  resultaba ser el único con hueco para *ambos* `bed` y `piano`, su único footprint
+  crecido se atribuía a lo que se procesara en último lugar, y la etiqueta del otro tipo
+  se quedaba huérfana en un sospechoso sin relación, que acababa con una pieza de 1
+  celda de ese tipo en un sitio completamente distinto — dos piezas del mismo tipo en
+  salas distintas, detectado por el test "cada footprint dentro de una sola sala" en
+  `generatePuzzle.test.ts`. El arreglo saca al sospechoso que creció de verdad del pool
+  para siempre en cuanto tiene éxito, en vez de reciclar su `type` por intercambio — ver
+  el test de regresión en `furniture.test.ts`.
   **Las 4 orientaciones de la L también son 4 bitmaps distintos, no una rotación CSS**:
   `sofaLMotif()` dibuja solo la orientación canónica (esquina arriba-izda, hueco
   abajo-dcha) con un respaldo genuinamente asimétrico (banda solo en el borde
@@ -116,6 +140,12 @@ nueva, no una continuación de aquel intento.
   cualquier asimetría correctamente. `pieceShape()` + `FurniturePiece.missingCorner`
   le dicen a `BoardGrid.vue` qué de los 4 ficheros usar — sin ningún `rotate()` en
   tiempo de render.
+  **`screen` puede llegar a 3 celdas en línea recta, no en L** — `pieceShape()` distingue
+  esto de la L del sofá mirando si el bounding box es 2x2 (L) o 1x3/3x1 (recto):
+  `PieceShape` ahora incluye `'h3'`/`'v3'` además de `'h2'`/`'v2'`/`'L'`, y
+  `furniturePieces()` solo calcula `missingCorner` cuando el bounding box es
+  genuinamente 2x2 — un biombo recto de 3 paneles no tiene una esquina 2x2 de la que
+  faltar una.
   **`bed` se hizo multi-celda porque una cama real es alargada, no cuadrada** — a 1
   celda, cabecero+almohada+edredón quedaban apretados en una caja 1:1; en 2 celdas el
   edredón simplemente se estira para llenar el largo extra, todo lo demás igual (ver
@@ -128,6 +158,65 @@ nueva, no una continuación de aquel intento.
   respaldo de `sofaMotif` — por eso su parámetro de orientación se llama `headEnd`
   (`'top'`/`'left'`) en vez de `backrest`, aunque sigue el mismo convenio de qué
   extremo/lado usa cada pieza (`bedSolo`/`bedPairV` → `'top'`, `bedPairH` → `'left'`).
+  **`piano` es multi-celda por la misma razón que `bed`**: a 1 celda no cabe nada
+  reconocible. **La tapa se dibuja cerrada, con un brillo, tras 5 intentos rechazados de
+  representarla abierta y alzada** (chaflán de 2 líneas rectas → "V" angulosa; curva
+  simétrica en cuarto de círculo; perfil `smoothstep` de 3 tramos; escalonado de 4
+  bloques → a esta resolución una curva se muestrea en saltos que se leen como ruido;
+  un escalonado en 2 tramos modelado sobre un icono clásico de piano, con banda de
+  sombra y una pata diagonal simulando la varilla que sostiene la tapa → seguía sin
+  convencer). Una tapa cerrada, plana, se lee mejor a este tamaño de celda que cualquier
+  intento de sugerir que está alzada en ángulo. El cuerpo es un rectángulo de esquinas
+  suaves (`clipCorners(..., 1)`, el mismo tratamiento que `chest`/`lamp`/el resto de
+  piezas rectangulares del set), con las 2 esquinas del lado del teclado sin redondear
+  (`{ bottom: true }`) para que no mellen la fascia. **`PIANO_BODY_LT` forma una banda
+  diagonal (`thickLine()`, el mismo helper de `screenMotif`) que cruza la tapa de lado a
+  lado**, no un brillo redondeado y estático (primer intento, rechazado) ni una banda
+  corta centrada (segundo intento, tampoco convenció) — un reflejo real sobre una tapa
+  lacada es un destello que recorre la superficie entera, no una mancha ni un segmento
+  que se queda corto. El ancho de la banda siempre llega a los 2 bordes; solo su
+  inclinación se adapta al alto disponible (fijo en 45° cuando cabe, más tendida si no)
+  porque el par vertical mide el doble de alto que el icono solo, y una banda a 45°
+  forzada a esa altura se saldría del área de la tapa. Se centra verticalmente dentro
+  del área de la tapa (entre el margen superior y el teclado). Se dibuja una única
+  vez en esta orientación vertical canónica (teclado abajo) y se reutiliza para las
+  otras 2 variantes vía `rotate90CW()` — la misma técnica de `sofaLMotif()` para sus 4
+  rotaciones — en vez de duplicar la lógica transpuesta. **El teclado mide 3px de largo
+  (`KEY_LEN`), no 2**: las 2 filas superiores alternan
+  `PIANO_KEY_WHITE`/`PIANO_KEY_BLACK` — teclas blanco/negro reales, tras dos intentos
+  anteriores rechazados (una franja lisa de un único tono se leía como "no hay
+  teclado"; antes de esa, puntitos alternando 2 tonos derivados del cuerpo se leían
+  como ruido) — y la fila inferior es enteramente blanca, imitando el borde frontal
+  propio de las teclas blancas: en un teclado real las teclas negras son más cortas que
+  las blancas, así que ese borde frontal queda expuesto sin ninguna división negra.
+  Justo debajo, en el margen, va la `STOOL` — banqueta roja a todo lo largo del
+  teclado, con el doble de grosor que el margen habitual (`STOOL_DEPTH = 2 ×
+  FURNITURE_MARGIN`) para leerse como un banco de verdad y no una simple línea; el
+  borde inferior del cuerpo (`y1`) se recorta esa misma cantidad extra para que la
+  banqueta siga cabiendo en el mismo canvas fijo, no como un asiento suelto. `PIANO_BODY`
+  se aclaró de un negro casi puro a un ciruela
+  oscuro: el negro original quedaba demasiado cerca en luminosidad del color de contorno
+  universal (`DARK`), así que el contorno prácticamente desaparecía contra el cuerpo.
+  Sin patas en el cuerpo (a diferencia de la mayoría del mobiliario): igual que una mesa
+  redonda, las patas de un piano de cola quedan bajo el vuelo del cuerpo/tapa y no
+  asoman desde cenital.
+  **`screen` (biombo) es la única pieza multi-celda que NO es un único bitmap
+  continuo**: al contrario que `rug`/`bed`/`piano`/`sofa` — pensados para leerse como un
+  solo objeto — un biombo real son paneles físicamente separados unidos por bisagras, así
+  que un hueco visible entre paneles es fiel al objeto, no una costura que esconder.
+  **La primera versión de `screenMotif()` dibujaba cada panel como un rectángulo con
+  marco y un motivo pintado centrado — rechazada porque la cara decorada de un panel de
+  biombo es vertical, así que es invisible en cenital, exactamente el mismo error ya
+  eliminado una vez para `window`/`painting`/`mirror`/`clock` (ver más arriba). Lo único
+  que sí se ve desde arriba es el canto superior, delgado, de cada panel, escorzado en
+  diagonal por el ángulo del pliegue.** El diseño actual dibuja cada panel como un trazo
+  diagonal grueso (`thickLine()`), alternando la dirección de la diagonal por panel para
+  que el trazo de uno empalme con el siguiente y forme un zigzag continuo a lo largo de
+  toda la tirada — el propio contorno en acordeón visto desde arriba — con un punto
+  `SCREEN_ACCENT` en cada bisagra para rellenar el pequeño hueco entre paneles. Al igual
+  que `rug`/`sofa`, degrada con elegancia (3 paneles → 2 → 1, un solo trazo diagonal
+  sigue siendo un panel de biombo suelto y reconocible) porque hasta un solo panel es un
+  objeto real — a diferencia de `bed`/`piano`, no está en `MUST_GROW_TYPES`.
   Cada pieza multi-celda deja el mismo margen pequeño y constante que el resto del
   mobiliario (`FURNITURE_MARGIN` en `gen-sprites.mjs`, medido en píxeles del lienzo, no
   proporcional al tamaño de la pieza) respecto al borde de su propia celda — para que

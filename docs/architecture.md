@@ -54,7 +54,8 @@ Ver [`game-rules.md`](./game-rules.md) para el significado de cada campo, y
 - **`rng.ts`** — PRNG determinista (mulberry32) para que el generador sea reproducible
   por semilla.
 - **`furnitureIcons.ts`** — mapa `FurnitureType` → ruta de sprite base, más
-  `CONNECTABLE_FURNITURE_SPRITES` para las variantes conectadas de `rug`/`bed`/`sofa`.
+  `CONNECTABLE_FURNITURE_SPRITES` para las variantes conectadas de `rug`/`bed`/`piano`/
+  `sofa`/`screen`.
 - **`suspectFace.ts`** — hash determinista de `suspectId` → sprite de cara (tono de
   piel + color de pelo), con el estilo de pelo según `gender`. Ver
   [`visual-design.md`](./visual-design.md).

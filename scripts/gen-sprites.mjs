@@ -44,13 +44,10 @@ const CHAIR = hex('#a9714a')
 const CHAIR_DK = hex('#7d5133')
 const CHAIR_LT = hex('#c99a68')
 const CHAIR_SHADOW = hex('#5c3a24')
+// Kept for CHEST_WOOD/CHEST_WOOD_DK below to reuse (same wood tone) — no longer used
+// for a shelf sprite itself since `bookshelf` was retired (see docs/visual-design.md).
 const SHELF = hex('#8b5a3c')
 const SHELF_DK = hex('#5f3c24')
-const SHELF_BG = hex('#e8ddc8')
-const BOOK_RED = hex('#c94f4f')
-const BOOK_BLUE = hex('#4f7fc9')
-const BOOK_YEL = hex('#d9b64f')
-const BOOK_GRN = hex('#4fa876')
 const SOFA = hex('#6c8ebf')
 const SOFA_DK = hex('#4d6c96')
 const SOFA_LT = hex('#93b3de')
@@ -84,7 +81,17 @@ const GLOBE_OCEAN = hex('#5f8fa8')
 const GLOBE_LAND = hex('#7fa563')
 const GLOBE_LAND_DK = hex('#5c7d47')
 const GLOBE_RING = hex('#b8935a')
-const GLOBE_STAND = SHELF // same wood tone as the bookshelf/chest, reused rather than re-declared
+const GLOBE_STAND = SHELF // same wood tone as the chest, reused rather than re-declared
+// Lighter than the original near-black (#241c22): that was so close in value to the
+// universal DARK outline that the outline all but disappeared against the body,
+// leaving the silhouette with no clean edge to read against.
+const PIANO_BODY = hex('#4a3a44')
+const PIANO_BODY_LT = hex('#6b5560')
+const PIANO_KEY_WHITE = hex('#f2ede0')
+const PIANO_KEY_BLACK = hex('#1a141a')
+const STOOL = hex('#c23b3b')
+const SCREEN_FRAME = hex('#5c3a24')
+const SCREEN_ACCENT = hex('#c9a227')
 
 // ---- pixel canvas helpers --------------------------------------------
 function hex(c) {
@@ -237,6 +244,23 @@ function bevel(canvas, x0, y0, x1, y1, base, light, dark, open = {}) {
   if (!open.right) rect(canvas, x1, y0, x1, y1, dark)
 }
 
+/** Draws a `thickness`-px-wide stroke from `(x0,y0)` to `(x1,y1)` by stamping a small
+ * square at each interpolated point, stepping along whichever axis spans the larger
+ * distance — works for shallow and steep slopes alike, unlike walking a single fixed
+ * axis. Used by `screenMotif` to draw each folding-screen panel as a diagonal line. */
+function thickLine(canvas, x0, y0, x1, y1, thickness, color) {
+  const dx = x1 - x0
+  const dy = y1 - y0
+  const steps = Math.max(Math.abs(dx), Math.abs(dy), 1)
+  const half = (thickness - 1) / 2
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps
+    const x = x0 + dx * t
+    const y = y0 + dy * t
+    rect(canvas, Math.round(x - half), Math.round(y - half), Math.round(x + half), Math.round(y + half), color)
+  }
+}
+
 async function render(canvas, filename) {
   const height = canvas.length
   const width = canvas[0].length
@@ -366,25 +390,160 @@ async function chair() {
   await render(c, 'chair.png')
 }
 
-async function bookshelf() {
-  const c = newCanvas()
-  bevel(c, 2, 2, 13, 13, SHELF, SHELF, SHELF_DK)
-  clipCorners(c, 2, 2, 13, 13, 1)
-  rect(c, 3, 3, 12, 12, SHELF_BG)
-  const books = [BOOK_RED, BOOK_BLUE, BOOK_YEL, BOOK_GRN]
-  let i = 0
-  for (const rowY of [3, 7]) {
-    for (let x = 3; x <= 11; x += 2) {
-      rect(c, x, rowY, x, rowY + 3, books[i % books.length])
-      i++
-    }
+/** Grand piano, top-down, with the lid closed — after 5 rejected attempts at an open,
+ * raised lid (a straight chamfer "V"; a symmetric round; a 3-tier S-curve; a 4-block
+ * staircase; a 2-tier stepped lid with a shadow band and a prop-leg stick), a plain
+ * closed lid reads far better at this pixel count than trying to depict the lid raised
+ * at an angle. The body is a soft-cornered rect — the same `clipCorners(..., 1)`
+ * treatment `chest`/`lamp`/etc. use — with the 2 bottom corners left sharp (`{ bottom:
+ * true }`) so they don't nick into the keyboard fascia. `PIANO_BODY_LT` forms a
+ * diagonal glare band crossing the FULL width of the lid, edge to edge (`thickLine()`,
+ * the same helper `screenMotif` uses) rather than a short, centered segment or a
+ * rounded, stationary-looking blob — a real lacquered lid reflects an overhead light as
+ * a streak that runs all the way across, not a spot that stops partway. The keyboard is
+ * a strip of alternating `PIANO_KEY_WHITE`/`PIANO_KEY_BLACK` bands, `KEY_LEN` px long,
+ * with one more full-width white row below them (`KEY_LEN + 1` total) — real piano
+ * black keys are shorter than the white keys, so the white keys' own front edge shows
+ * as an unbroken white strip past where the black keys end, not blended into the
+ * alternating pattern. Below that sits a `STOOL` bar, `STOOL_DEPTH` px deep (twice
+ * `FURNITURE_MARGIN`, unlike every other piece's margin-thin floor gap) and running the
+ * keyboard's full length like a real bench, not a single small seat — the body's own
+ * bottom edge (`y1`) is pulled in by that same amount so the bench still fits inside
+ * the same fixed canvas. Always drawn in this one canonical vertical orientation (keys
+ * at the bottom) and reused for the other 2 sprites via `rotate90CW()` — the same
+ * technique `sofaLMotif()` uses for its 4 rotations — rather than a second, transposed
+ * copy of this logic. No legs on the body: like a round table, a grand piano's legs sit
+ * well inside the overhang of the body/lid and are fully hidden from directly above.
+ * Always grows to a real 2-cell footprint or gets dropped (see `assignMustGrow`) — a
+ * piano is never small/square in reality, so a 1-cell version would be a contradiction
+ * the same way a 1-cell bed is. */
+function pianoMotif(c) {
+  const w = c[0].length
+  const h = c.length
+  const m = FURNITURE_MARGIN
+  const STOOL_DEPTH = m * 2
+  const KEY_LEN = 3
+  const x1 = w - 1 - m
+  const y1 = h - 1 - STOOL_DEPTH
+
+  rect(c, m, m, x1, y1, PIANO_BODY)
+  clipCorners(c, m, m, x1, y1, 1, { bottom: true }) // soft corners; flat/sharp where the keys sit
+
+  // Diagonal glare band crossing the full width of the lid, edge to edge, centered
+  // vertically within the lid area (between the top margin and the keyboard). Its
+  // horizontal span always reaches both edges; only its steepness adapts to whatever
+  // vertical room is available, since the v2 pair's canvas is twice as tall as the
+  // solo icon's.
+  const lidLeft = m + 1
+  const lidRight = x1 - 1
+  const lidTop = m + 1
+  const lidBottom = y1 - KEY_LEN - 1
+  const bandSpanX = lidRight - lidLeft
+  const bandSpanY = Math.min(bandSpanX, lidBottom - lidTop)
+  const bandY = lidTop + Math.floor((lidBottom - lidTop - bandSpanY) / 2)
+  thickLine(c, lidLeft, bandY, lidRight, bandY + bandSpanY, 2, PIANO_BODY_LT)
+
+  for (let x = m; x <= x1; x++) {
+    rect(c, x, y1 - KEY_LEN + 1, x, y1 - 1, (x - m) % 2 === 0 ? PIANO_KEY_WHITE : PIANO_KEY_BLACK)
   }
-  rect(c, 3, 6, 12, 6, SHELF_DK)
-  rect(c, 3, 10, 12, 10, SHELF_DK)
-  rect(c, 3, 11, 12, 13, SHELF_BG)
+  rect(c, m, y1, x1, y1, PIANO_KEY_WHITE) // the white keys' own front edge, past where the black keys end
+  rect(c, m, y1 + 1, x1, h - 1, STOOL) // bench, in the margin, full width
+}
+
+async function pianoSolo() {
+  const c = newCanvas(16, 16)
+  pianoMotif(c)
   center(c)
   outline(c, DARK)
-  await render(c, 'bookshelf.png')
+  await render(c, 'piano-solo.png')
+}
+
+async function pianoPairV() {
+  const c = newCanvas(16, 32)
+  pianoMotif(c)
+  outline(c, DARK)
+  await render(c, 'piano-pair-v.png')
+}
+
+async function pianoPairH() {
+  const c = newCanvas(16, 32)
+  pianoMotif(c)
+  outline(c, DARK)
+  await render(rotate90CW(c), 'piano-pair-h.png')
+}
+
+/** Folding screen (biombo), true top-down: a screen's decorated panel FACE is vertical,
+ * so from directly above it's invisible — drawing it as a flat framed square with a
+ * painted motif (the original version of this function) was the exact front-view
+ * mistake already eliminated once for window/painting/mirror/clock. What a bird's-eye
+ * view actually shows is each panel's thin top edge, foreshortened by the fold angle
+ * into a diagonal stroke, tracing the zigzag the whole run makes as it stands open.
+ * Panels alternate diagonal direction (`down` below) so consecutive strokes land on the
+ * same near/far edge at each boundary, chaining into one continuous zigzag across the
+ * run; a small `SCREEN_ACCENT` dot bridges the small gap at each hinge. Degrades
+ * gracefully like rug/sofa — even a single panel (one stray diagonal leaf) is still a
+ * recognizable screen (see `growScreen`), unlike `bed`/`piano`. `axis` is which way the
+ * panels line up ('h' for the solo icon and horizontal runs, 'v' for vertical runs). */
+function screenMotif(c, axis) {
+  const w = c[0].length
+  const h = c.length
+  const m = FURNITURE_MARGIN
+  const panelCount = axis === 'h' ? w / 16 : h / 16
+  const near = m
+  const far = (axis === 'h' ? h : w) - 1 - m
+
+  for (let i = 0; i < panelCount; i++) {
+    const a0 = i * 16 + m
+    const a1 = i * 16 + 15 - m
+    const down = i % 2 === 0 // '\' from the near edge to the far edge, vs '/' the reverse
+    const b0 = down ? near : far
+    const b1 = down ? far : near
+
+    if (axis === 'h') thickLine(c, a0, b0, a1, b1, 2, SCREEN_FRAME)
+    else thickLine(c, b0, a0, b1, a1, 2, SCREEN_FRAME)
+
+    if (i > 0) {
+      // b0 here equals the previous panel's b1 by construction — the shared hinge point.
+      if (axis === 'h') circle(c, i * 16 + 0.5, b0 + 0.5, 1, SCREEN_ACCENT)
+      else circle(c, b0 + 0.5, i * 16 + 0.5, 1, SCREEN_ACCENT)
+    }
+  }
+}
+
+async function screenSolo() {
+  const c = newCanvas(16, 16)
+  screenMotif(c, 'h')
+  center(c)
+  outline(c, DARK)
+  await render(c, 'screen-solo.png')
+}
+
+async function screenPairH() {
+  const c = newCanvas(32, 16)
+  screenMotif(c, 'h')
+  outline(c, DARK)
+  await render(c, 'screen-pair-h.png')
+}
+
+async function screenPairV() {
+  const c = newCanvas(16, 32)
+  screenMotif(c, 'v')
+  outline(c, DARK)
+  await render(c, 'screen-pair-v.png')
+}
+
+async function screenTripleH() {
+  const c = newCanvas(48, 16)
+  screenMotif(c, 'h')
+  outline(c, DARK)
+  await render(c, 'screen-triple-h.png')
+}
+
+async function screenTripleV() {
+  const c = newCanvas(16, 48)
+  screenMotif(c, 'v')
+  outline(c, DARK)
+  await render(c, 'screen-triple-v.png')
 }
 
 /** Sofa, top-down, 3 distinct value zones so each part of the silhouette actually
@@ -743,7 +902,9 @@ await rugSolo()
 await rugPairH()
 await rugPairV()
 await chair()
-await bookshelf()
+await pianoSolo()
+await pianoPairH()
+await pianoPairV()
 await sofaSolo()
 await sofaPairH()
 await sofaPairV()
@@ -757,6 +918,11 @@ await table()
 await statue()
 await globe()
 await vase()
+await screenSolo()
+await screenPairH()
+await screenPairV()
+await screenTripleH()
+await screenTripleV()
 await suspectFaces()
 await victimFace()
 await floorDither()

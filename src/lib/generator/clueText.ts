@@ -5,7 +5,7 @@ const FURNITURE_PHRASE: Record<FurnitureType, string> = {
   plant: 'una planta',
   rug: 'una alfombra',
   chair: 'una silla',
-  bookshelf: 'una estantería',
+  piano: 'un piano de cola',
   sofa: 'el sofá',
   bed: 'la cama',
   chest: 'un baúl',
@@ -14,6 +14,7 @@ const FURNITURE_PHRASE: Record<FurnitureType, string> = {
   statue: 'una estatua',
   globe: 'un globo terráqueo',
   vase: 'un jarrón',
+  screen: 'un biombo',
 }
 
 const DIRECTION_LABEL: Record<'N' | 'S' | 'E' | 'W', string> = {
@@ -32,8 +33,8 @@ function onFurnitureText(furniture: FurnitureType, gender: 'f' | 'm'): string {
       return `Estaba ${sentado} en el sofá.`
     case 'rug':
       return 'Estaba de pie sobre una alfombra.'
-    case 'bookshelf':
-      return 'Estaba justo al lado de la estantería.'
+    case 'piano':
+      return 'Estaba de pie junto a un piano de cola.'
     case 'plant':
       return 'Estaba junto a una planta.'
     case 'bed':
@@ -50,6 +51,8 @@ function onFurnitureText(furniture: FurnitureType, gender: 'f' | 'm'): string {
       return 'Estaba observando un globo terráqueo.'
     case 'vase':
       return 'Estaba junto a un jarrón.'
+    case 'screen':
+      return 'Estaba justo al lado de un biombo.'
   }
 }
 

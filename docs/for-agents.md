@@ -62,18 +62,28 @@ Dirección de dependencia estricta: `types/` ← `lib/` ← `data/` ← `stores/
   (`(await navigator.serviceWorker.getRegistrations()).forEach(r => r.unregister())`
   + `caches.keys().then(ks => ks.forEach(k => caches.delete(k)))`) antes de seguir
   depurando.
-- **El mobiliario ya NO garantiza 1 celda por tipo**: `rug`/`bed` pueden ocupar 2 celdas
-  y `sofa` hasta 3 (`generator/furniture.ts`, `growRug`/`growSofa`). Quien toque
+- **El mobiliario ya NO garantiza 1 celda por tipo**: `rug`/`bed`/`piano` pueden ocupar
+  2 celdas, `sofa` hasta 3 (L), y `screen` hasta 3 (línea recta) — ver
+  `generator/furniture.ts` (`growRug`/`growSofa`/`growScreen`). Quien toque
   `BoardGrid.vue` o cualquier lógica que lea `cell.furniture` no debe asumir
   cardinalidad 1 — usar `cells.filter(c => c.furniture === type)` como ya hace
   `solver.ts`/`clueFacts.ts`, nunca "el" `Cell` de ese tipo.
-- **`bed` nunca degrada a 1 celda** (a diferencia de `rug`/`sofa`, que sí): se asigna
-  aparte en `assignBed` (`generator/furniture.ts`), antes que el resto del mobiliario,
-  y si ningún sospechoso candidato tiene hueco para 2 celdas, se descarta del todo para
-  ese caso en vez de aparecer en 1 celda — una cama de 1 celda no se lee como cama. El
-  sprite `bed-solo.png`/`FURNITURE_SPRITES.bed` se mantiene igualmente por completitud
-  de tipos (todo `FurnitureType` necesita una entrada) y como red de seguridad para un
-  futuro caso hecho a mano, pero el generador procedural nunca lo produce.
+- **`bed`/`piano` nunca degradan a 1 celda** (a diferencia de `rug`/`sofa`/`screen`, que
+  sí): cada uno se asigna aparte en `assignMustGrow` (`generator/furniture.ts`, llamado
+  una vez por tipo en `MUST_GROW_TYPES`), antes que el resto del mobiliario, y si ningún
+  sospechoso candidato tiene hueco para 2 celdas, se descarta del todo para ese caso en
+  vez de aparecer en 1 celda — una cama o un piano de 1 celda no se leen como tales. Los
+  sprites `bed-solo.png`/`piano-solo.png` (y sus entradas en `FURNITURE_SPRITES`) se
+  mantienen igualmente por completitud de tipos (todo `FurnitureType` necesita una
+  entrada) y como red de seguridad para un futuro caso hecho a mano, pero el generador
+  procedural nunca los produce.
+  **Trampa ya sufrida al generalizar esto a un segundo tipo**: la primera versión de
+  `assignMustGrow` reasignaba el `type` entre sospechosos ya emparejados (en vez de
+  sacar al que de verdad creció del pool para siempre) — si el mismo sospechoso era el
+  único con hueco para *ambos* `bed` y `piano`, el segundo tipo procesado se quedaba con
+  la etiqueta en un sospechoso sin relación, que producía una segunda pieza de ese tipo
+  en otra sala. Ver el test de regresión en `furniture.test.ts` y la explicación
+  completa en `docs/visual-design.md`.
 
 ## Cómo verificar que algo sigue funcionando
 

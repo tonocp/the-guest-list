@@ -45,19 +45,21 @@ describe('generatePuzzle', () => {
         const placements = Object.fromEntries(puzzle.suspects.map((s) => [s.id, puzzle.solution[s.id]]))
         expect(getConflicts(puzzle, placements)).toEqual([])
 
-        // furniture footprints: rug/bed up to 2 cells, sofa up to 3, everything else exactly 1
+        // furniture footprints: rug/bed/piano up to 2 cells, sofa/screen up to 3, everything else exactly 1
         const furnitureCounts = new Map<string, number>()
         for (const cell of puzzle.cells) {
           if (!cell.furniture) continue
           furnitureCounts.set(cell.furniture, (furnitureCounts.get(cell.furniture) ?? 0) + 1)
         }
-        const MAX_FOOTPRINT: Partial<Record<string, number>> = { rug: 2, bed: 2, sofa: 3 }
+        const MAX_FOOTPRINT: Partial<Record<string, number>> = { rug: 2, bed: 2, piano: 2, sofa: 3, screen: 3 }
         for (const [type, count] of furnitureCounts) {
           expect(count).toBeGreaterThanOrEqual(1)
           expect(count).toBeLessThanOrEqual(MAX_FOOTPRINT[type] ?? 1)
         }
-        // bed never falls back to 1 cell like rug/sofa can — it's dropped instead (see assignBed)
+        // bed/piano never fall back to 1 cell like rug/sofa/screen can — they're dropped
+        // instead (see assignMustGrow)
         expect(furnitureCounts.get('bed') ?? 2).toBe(2)
+        expect(furnitureCounts.get('piano') ?? 2).toBe(2)
 
         // every furniture footprint stays within a single room
         const roomIdsByFurnitureType = new Map<string, Set<string>>()

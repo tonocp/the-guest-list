@@ -73,8 +73,10 @@ export interface FurniturePiece {
   maxRow: number
   minCol: number
   maxCol: number
-  /** Only set for a 3-cell piece (the L-shaped sofa — see `generator/furniture.ts`
-   * `growSofa`), whose footprint spans a 2x2 bounding box with one corner empty. */
+  /** Only set for an L-shaped 3-cell piece (the sofa — see `generator/furniture.ts`
+   * `growSofa`), whose footprint spans a 2x2 bounding box with one corner empty. A
+   * straight 3-cell piece (the screen — see `growScreen`) is 3 cells in a single row/
+   * column instead, so it never gets a `missingCorner`. */
   missingCorner?: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
 }
 
@@ -100,8 +102,11 @@ export function furniturePieces(puzzle: Pick<Puzzle, 'cells'>): FurniturePiece[]
     const minCol = Math.min(...cells.map((c) => c.col))
     const maxCol = Math.max(...cells.map((c) => c.col))
 
+    // Only a genuine L (2x2 bounding box, one corner empty) gets a missingCorner — a
+    // straight 3-cell piece (the screen) has minRow===maxRow or minCol===maxCol, so
+    // there's no 2x2 box to find a missing corner of.
     let missingCorner: FurniturePiece['missingCorner']
-    if (cells.length === 3) {
+    if (cells.length === 3 && minRow !== maxRow && minCol !== maxCol) {
       const has = (row: number, col: number) => cells.some((c) => c.row === row && c.col === col)
       if (!has(minRow, minCol)) missingCorner = 'topLeft'
       else if (!has(minRow, maxCol)) missingCorner = 'topRight'
@@ -114,16 +119,21 @@ export function furniturePieces(puzzle: Pick<Puzzle, 'cells'>): FurniturePiece[]
   return pieces
 }
 
-export type PieceShape = 'single' | 'h2' | 'v2' | 'L'
+export type PieceShape = 'single' | 'h2' | 'v2' | 'h3' | 'v3' | 'L'
 
 /** Which sprite shape renders a piece from `furniturePieces()`. Every shape (including
  * each of the 4 possible L orientations) has its own dedicated pre-baked sprite file —
  * see `furnitureIcons.ts` — so there's no rotation left to compute here; picking the
- * right file for an 'L' piece just needs `piece.missingCorner` directly. */
+ * right file for an 'L' piece just needs `piece.missingCorner` directly. A 3-cell piece
+ * is 'L' only if it's genuinely L-shaped (spans both rows and cols — the sofa); a
+ * straight 3-in-a-row/column piece (the screen) is 'h3'/'v3' instead, same convention
+ * as 'h2'/'v2'. */
 export function pieceShape(piece: FurniturePiece): PieceShape {
   if (piece.cells.length === 1) return 'single'
-  if (piece.cells.length === 3) return 'L'
-  return piece.minRow === piece.maxRow ? 'h2' : 'v2'
+  const horizontal = piece.minRow === piece.maxRow
+  const straight = horizontal || piece.minCol === piece.maxCol
+  if (piece.cells.length === 3) return straight ? (horizontal ? 'h3' : 'v3') : 'L'
+  return horizontal ? 'h2' : 'v2'
 }
 
 export interface MultiCellFurniturePlacement {

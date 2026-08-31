@@ -44,6 +44,14 @@ describe('furniturePieces', () => {
     const piece = furniturePieces(gridOf(furnitureByKey as Record<string, FurnitureType>))[0]
     expect(piece.missingCorner).toBe(missingCorner)
   })
+
+  it('leaves missingCorner unset for a straight 3-cell piece (the screen has no 2x2 box)', () => {
+    const horizontal = furniturePieces(gridOf({ '1-1': 'screen', '1-2': 'screen', '1-3': 'screen' }))[0]
+    expect(horizontal.missingCorner).toBeUndefined()
+
+    const vertical = furniturePieces(gridOf({ '1-1': 'screen', '2-1': 'screen', '3-1': 'screen' }))[0]
+    expect(vertical.missingCorner).toBeUndefined()
+  })
 })
 
 describe('pieceShape', () => {
@@ -60,9 +68,17 @@ describe('pieceShape', () => {
     expect(pieceShape(v)).toBe('v2')
   })
 
-  it('is "L" for a 3-cell piece', () => {
+  it('is "L" for an L-shaped 3-cell piece', () => {
     const piece = furniturePieces(gridOf({ '1-1': 'sofa', '1-2': 'sofa', '2-1': 'sofa' }))[0]
     expect(pieceShape(piece)).toBe('L')
+  })
+
+  it('is "h3"/"v3" for a straight 3-cell piece', () => {
+    const h = furniturePieces(gridOf({ '1-1': 'screen', '1-2': 'screen', '1-3': 'screen' }))[0]
+    expect(pieceShape(h)).toBe('h3')
+
+    const v = furniturePieces(gridOf({ '1-1': 'screen', '2-1': 'screen', '3-1': 'screen' }))[0]
+    expect(pieceShape(v)).toBe('v3')
   })
 })
 
@@ -88,6 +104,14 @@ describe('multiCellFurniturePlacements', () => {
     const [piece] = multiCellFurniturePlacements(gridOf({ '1-1': 'sofa', '1-2': 'sofa', '2-1': 'sofa' }))
     expect(piece.shape).toBe('L')
     expect(piece.missingCorner).toBe('bottomRight')
+  })
+
+  it('spans the full 1x3 run for a straight 3-cell piece', () => {
+    const [horizontal] = multiCellFurniturePlacements(gridOf({ '1-1': 'screen', '1-2': 'screen', '1-3': 'screen' }))
+    expect(horizontal).toMatchObject({ shape: 'h3', gridColumn: '2 / 5', gridRow: '2 / 3' })
+
+    const [vertical] = multiCellFurniturePlacements(gridOf({ '1-1': 'screen', '2-1': 'screen', '3-1': 'screen' }))
+    expect(vertical).toMatchObject({ shape: 'v3', gridColumn: '2 / 3', gridRow: '2 / 5' })
   })
 
   /**
