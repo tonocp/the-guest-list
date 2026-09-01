@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type { Puzzle, Position } from '../types/puzzle'
 import { getConflicts, isComplete, matchesSolution, getMurderer, type Placements } from '../lib/gridLogic'
-import { resolvePuzzle } from '../data/puzzles'
+import { resolvePuzzle } from '../data/resolvePuzzle'
 import { gameRepository, type SavedGame } from '../lib/persistence'
 
 interface HistoryEntry {
@@ -19,8 +19,6 @@ export const usePuzzleStore = defineStore('puzzle', {
     won: false,
     startedAt: 0,
     elapsedMs: 0,
-    /** Only known for procedurally generated puzzles (via the saved record). `null`
-     * means this puzzle has nothing to autosave against (e.g. a static fixture). */
     savedSeed: null as number | null,
     completedAt: null as number | null,
   }),
@@ -32,8 +30,7 @@ export const usePuzzleStore = defineStore('puzzle', {
   },
 
   actions: {
-    /** Resolves the puzzle by id (hand-authored or regenerated from a saved seed) and
-     * restores any saved progress. Returns false if no such puzzle exists. */
+    /** Rebuilds the puzzle and restores saved progress. False if no such saved game. */
     async load(id: string): Promise<boolean> {
       const puzzle = await resolvePuzzle(id)
       if (!puzzle) return false
@@ -141,8 +138,7 @@ export const usePuzzleStore = defineStore('puzzle', {
       }
     },
 
-    /** Fire-and-forget autosave, called after every mutating action. No-op for
-     * puzzles with no known seed (static fixtures) — nothing to regenerate against. */
+    /** Fire-and-forget autosave after every mutating action. */
     persist() {
       if (!this.puzzle || this.savedSeed === null) return
       const now = Date.now()

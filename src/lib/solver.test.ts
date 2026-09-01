@@ -1,52 +1,61 @@
 import { describe, expect, it } from 'vitest'
 import type { Cell, ClueRule } from '../types/puzzle'
 import { countSolutions, hasUniqueSolution, type SolverInput } from './solver'
-import { fiestaDisfraces } from '../data/puzzles/fiestaDisfraces'
-import { estudioYoga } from '../data/puzzles/estudioYoga'
 
-function toSolverInput(puzzle: { size: number; suspects: { id: string }[]; cells: Cell[] }, rules: ClueRule[]): SolverInput {
-  return {
-    size: puzzle.size,
-    suspectIds: puzzle.suspects.map((s) => s.id),
-    cells: puzzle.cells,
-    rules,
+describe('a full-size puzzle fixture (regression)', () => {
+  const roomGrid = [
+    ['A', 'A', 'A', 'B', 'B'],
+    ['A', 'A', 'B', 'B', 'B'],
+    ['C', 'C', 'C', 'D', 'D'],
+    ['C', 'C', 'D', 'D', 'D'],
+    ['E', 'E', 'E', 'E', 'E'],
+  ]
+  const furniture: Record<string, Cell['furniture']> = {
+    '0-0': 'sofa',
+    '2-2': 'rug',
+    '3-3': 'chair',
+    '0-3': 'plant',
+    '1-4': 'statue',
   }
-}
+  const cells: Cell[] = roomGrid.flatMap((row, r) =>
+    row.map((roomId, c) => ({ row: r, col: c, roomId, furniture: furniture[`${r}-${c}`] })),
+  )
+  const suspectIds = ['nora', 'delia', 'priya', 'marcus', 'teo']
+  const solution = {
+    nora: { row: 0, col: 0 },
+    delia: { row: 1, col: 1 },
+    priya: { row: 2, col: 2 },
+    marcus: { row: 3, col: 3 },
+    teo: { row: 4, col: 4 },
+  }
+  const rules: ClueRule[] = [
+    { type: 'on-furniture', suspect: 'nora', furniture: 'sofa' },
+    { type: 'room', suspect: 'delia', roomId: 'A' },
+    { type: 'on-furniture', suspect: 'priya', furniture: 'rug' },
+    { type: 'on-furniture', suspect: 'marcus', furniture: 'chair' },
+    { type: 'direction', subject: 'teo', dir: 'S', reference: 'marcus' },
+  ]
+  const inputWith = (rs: ClueRule[]): SolverInput => ({ size: 5, suspectIds, cells, rules: rs })
 
-describe('hand-authored puzzle fixtures (regression)', () => {
-  it('fiestaDisfraces has a unique solution matching the authored solution', () => {
-    const input = toSolverInput(fiestaDisfraces, fiestaDisfraces.rules)
-    const result = countSolutions(input, 2)
+  it('has a unique solution matching the authored solution', () => {
+    const result = countSolutions(inputWith(rules), 2)
     expect(result.count).toBe(1)
-    expect(result.solutions[0]).toEqual(fiestaDisfraces.solution)
-  })
-
-  it('estudioYoga has a unique solution matching the authored solution', () => {
-    const input = toSolverInput(estudioYoga, estudioYoga.rules)
-    const result = countSolutions(input, 2)
-    expect(result.count).toBe(1)
-    expect(result.solutions[0]).toEqual(estudioYoga.solution)
+    expect(result.solutions[0]).toEqual(solution)
   })
 
   it('reports non-unique for a deliberately under-constrained rule set', () => {
-    const input = toSolverInput(fiestaDisfraces, fiestaDisfraces.rules.slice(0, 1))
-    expect(hasUniqueSolution(input)).toBe(false)
-    expect(countSolutions(input, 2).count).toBe(2)
+    const underConstrained = inputWith(rules.slice(0, 1))
+    expect(hasUniqueSolution(underConstrained)).toBe(false)
+    expect(countSolutions(underConstrained, 2).count).toBe(2)
   })
 
   it('reports zero solutions for a contradictory rule set', () => {
-    // Nora is already pinned to (0,0) — room "A" — by the sofa clue. Forcing her
-    // into room "C" too makes her domain empty.
-    const contradictory: ClueRule[] = [...fiestaDisfraces.rules, { type: 'room', suspect: 'nora', roomId: 'C' }]
-    const input = toSolverInput(fiestaDisfraces, contradictory)
-    expect(countSolutions(input, 2).count).toBe(0)
+    const contradictory: ClueRule[] = [...rules, { type: 'room', suspect: 'nora', roomId: 'C' }]
+    expect(countSolutions(inputWith(contradictory), 2).count).toBe(0)
   })
 })
 
 describe('rule-type correctness on a small hand-verified 3x3 fixture', () => {
-  // Room layout:  A A B
-  //               A B B
-  //               C C C
   const roomGrid = [
     ['A', 'A', 'B'],
     ['A', 'B', 'B'],
@@ -60,9 +69,6 @@ describe('rule-type correctness on a small hand-verified 3x3 fixture', () => {
   }
 
   it('direction + adjacent + on-furniture combine to a unique solution', () => {
-    // X is pinned to (0,1) via a unique furniture item; the room layout makes X's
-    // room "A" only reachable from row 1 via column 0, and the two direction chains
-    // force the row order X < Y < Z — together this has exactly one solution.
     const cells = baseCells({ '0-1': 'plant' })
     const rules: ClueRule[] = [
       { type: 'on-furniture', suspect: 'x', furniture: 'plant' },
@@ -81,8 +87,6 @@ describe('rule-type correctness on a small hand-verified 3x3 fixture', () => {
   })
 
   it('adjacent is only ever satisfiable via a shared room, never orthogonal touch', () => {
-    // Z is always in room "C" (all of row 2); X (row 0) can only ever be room A/B.
-    // adjacent(x, z) can therefore never be satisfied, regardless of columns.
     const cells = baseCells()
     const rules: ClueRule[] = [
       { type: 'direction', subject: 'y', dir: 'S', reference: 'x' },
@@ -94,13 +98,11 @@ describe('rule-type correctness on a small hand-verified 3x3 fixture', () => {
   })
 
   it('near-furniture (positive) is consistent with an elimination-forced placement', () => {
-    // X and Z are pinned by unique furniture; Y is forced into the one remaining
-    // row/col by elimination — (1,1), orthogonally adjacent to the window at (1,2).
-    const cells = baseCells({ '0-0': 'sofa', '2-2': 'chair', '1-2': 'window' })
+    const cells = baseCells({ '0-0': 'sofa', '2-2': 'chair', '1-2': 'bed' })
     const rules: ClueRule[] = [
       { type: 'on-furniture', suspect: 'x', furniture: 'sofa' },
       { type: 'on-furniture', suspect: 'z', furniture: 'chair' },
-      { type: 'near-furniture', suspect: 'y', furniture: 'window' },
+      { type: 'near-furniture', suspect: 'y', furniture: 'bed' },
     ]
     const input: SolverInput = { size: 3, suspectIds: ['x', 'y', 'z'], cells, rules }
     const result = countSolutions(input, 2)
@@ -109,11 +111,11 @@ describe('rule-type correctness on a small hand-verified 3x3 fixture', () => {
   })
 
   it('near-furniture negate contradicts the same elimination-forced placement', () => {
-    const cells = baseCells({ '0-0': 'sofa', '2-2': 'chair', '1-2': 'window' })
+    const cells = baseCells({ '0-0': 'sofa', '2-2': 'chair', '1-2': 'bed' })
     const rules: ClueRule[] = [
       { type: 'on-furniture', suspect: 'x', furniture: 'sofa' },
       { type: 'on-furniture', suspect: 'z', furniture: 'chair' },
-      { type: 'near-furniture', suspect: 'y', furniture: 'window', negate: true },
+      { type: 'near-furniture', suspect: 'y', furniture: 'bed', negate: true },
     ]
     const input: SolverInput = { size: 3, suspectIds: ['x', 'y', 'z'], cells, rules }
     expect(countSolutions(input, 2).count).toBe(0)
@@ -121,14 +123,10 @@ describe('rule-type correctness on a small hand-verified 3x3 fixture', () => {
 })
 
 describe('performance smoke test — 12x12, realistically shaped', () => {
-  // 8 suspects pinned to the diagonal by a unique furniture item each (mirrors the
-  // generator's plan: one furniture type per suspect, ≤8 types exist), the remaining
-  // 4 chained to each other via `direction` only — the part furniture can't reach.
-  // This is the shape the real generator produces, NOT an adversarial worst case.
   function realisticTwelve(): SolverInput {
     const size = 12
     const suspectIds = Array.from({ length: size }, (_, i) => `s${i}`)
-    const furnitureTypes = ['plant', 'rug', 'chair', 'bookshelf', 'sofa', 'window', 'painting', 'lamp'] as const
+    const furnitureTypes = ['plant', 'rug', 'chair', 'piano', 'sofa', 'bed', 'chest', 'lamp'] as const
     const cells: Cell[] = []
     for (let row = 0; row < size; row++) {
       for (let col = 0; col < size; col++) cells.push({ row, col, roomId: 'R' })
@@ -168,12 +166,6 @@ describe('performance smoke test — 12x12, realistically shaped', () => {
 
 describe('node budget circuit breaker', () => {
   it('bails out instead of hanging on a pathological all-direction chain, and reports "not unique"', () => {
-    // Deliberately adversarial: a long `direction` chain with zero unary anchoring
-    // anywhere. Measured separately: this genuinely blows up combinatorially (confirmed
-    // exponential — exactly C(2N,N) backtracking nodes) even with MRV + forward
-    // checking, which is exactly why the node budget exists. Real generator output
-    // never looks like this (see the realistic case above) because clue selection is
-    // biased to anchor suspects with room/furniture facts before relative ones.
     const size = 12
     const suspectIds = Array.from({ length: size }, (_, i) => `s${i}`)
     const cells: Cell[] = []

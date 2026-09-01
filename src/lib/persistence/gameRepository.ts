@@ -1,22 +1,19 @@
 import type { Difficulty, Position } from '../../types/puzzle'
 
-/**
- * A saved game never stores the full `Puzzle` — since the generator is deterministic
- * by seed, `{ id, seed, difficulty }` is enough to reconstruct it exactly via
- * `generatePuzzle()`. Only the player's progress needs persisting.
- */
+/** Never stores the full `Puzzle` — `{ id, seed, difficulty }` reconstructs it. Only
+ * player progress is persisted. */
 export interface SavedGame {
   id: string
   difficulty: Difficulty
   seed: number
-  /** Cached for list rendering without regenerating the puzzle. */
+  /** Cached for list rendering without regenerating. */
   title: string
   size: number
   suspectsCount: number
   placements: Record<string, Position | null>
   hintsUsed: number
   won: boolean
-  /** Active play time in ms — does not accrue while the app is closed. */
+  /** Active play time — does not accrue while the app is closed. */
   elapsedMs: number
   updatedAt: number
   completedAt?: number

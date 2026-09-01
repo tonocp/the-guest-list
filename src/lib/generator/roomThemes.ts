@@ -5,12 +5,11 @@ export interface ThemeRoom {
 
 export interface RoomTheme {
   id: string
-  /** Short phrase used to build the puzzle title, e.g. "Caso en la fiesta". */
+  /** Builds the puzzle title, e.g. "Caso en la fiesta". */
   label: string
   rooms: ThemeRoom[]
 }
 
-/** Each theme has enough room names to cover the biggest puzzle (12x12, "experto"). */
 export const ROOM_THEMES: RoomTheme[] = [
   {
     id: 'fiesta',

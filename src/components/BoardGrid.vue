@@ -1,22 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Puzzle } from '../types/puzzle'
+import type { Position, Puzzle } from '../types/puzzle'
 import { usePuzzleStore } from '../stores/puzzleStore'
-import { getCell } from '../lib/gridLogic'
-import { FURNITURE_SPRITES } from '../lib/furnitureIcons'
+import { cellKey, getCell, gridLine, multiCellFurniturePlacements } from '../lib/gridLogic'
+import { CONNECTABLE_FURNITURE_SPRITES, FURNITURE_SPRITES } from '../lib/furnitureIcons'
 import { facePathForSuspect, VICTIM_FACE } from '../lib/suspectFace'
 
 const props = defineProps<{ puzzle: Puzzle }>()
 const store = usePuzzleStore()
 
-const ROOM_COLORS = [
-  '#dbe7f7', // blue
-  '#f3ddef', // pink
-  '#d9f0e3', // green
-  '#fbe7cf', // orange
-  '#e6dff5', // purple
-  '#fdf1c7', // yellow
-]
+const ROOM_COLORS = ['#dbe7f7', '#f3ddef', '#d9f0e3', '#fbe7cf', '#e6dff5', '#fdf1c7']
 
 const WALL_COLOR = '#3d3428'
 const DIVIDER_COLOR = 'rgba(61,52,40,0.25)'
@@ -41,19 +34,45 @@ const roomLabelCell = computed(() => {
   return map
 })
 
-const suspectAt = computed(() => {
-  const map: Record<string, string> = {}
-  for (const [suspectId, pos] of Object.entries(store.placements)) {
-    if (pos) map[`${pos.row}-${pos.col}`] = suspectId
-  }
-  return map
-})
-
 const conflictedSuspectIds = computed(() => new Set(store.conflicts.map((c) => c.suspectId)))
 
 function suspectById(id: string) {
   return props.puzzle.suspects.find((s) => s.id === id)
 }
+
+const multiCellPlacements = computed(() => multiCellFurniturePlacements(props.puzzle))
+
+const multiCellPieces = computed(() => {
+  return multiCellPlacements.value.map((piece) => {
+    const sprites = CONNECTABLE_FURNITURE_SPRITES[piece.type]
+    const src =
+      piece.shape === 'L'
+        ? (sprites?.L?.[piece.missingCorner!] ?? FURNITURE_SPRITES[piece.type])
+        : (sprites?.[piece.shape as 'h2' | 'v2' | 'h3' | 'v3'] ?? FURNITURE_SPRITES[piece.type])
+    return {
+      key: `${piece.type}-${piece.cells[0].row}-${piece.cells[0].col}`,
+      src,
+      gridColumn: piece.gridColumn,
+      gridRow: piece.gridRow,
+    }
+  })
+})
+
+const multiCellCellKeys = computed(() => {
+  const keys = new Set<string>()
+  for (const piece of multiCellPlacements.value) {
+    for (const c of piece.cells) keys.add(cellKey(c.row, c.col))
+  }
+  return keys
+})
+
+/** Placed suspects as their own grid overlays, drawn on top of the cell and furniture
+ * layers so a face is never hidden by a spanning piece. */
+const placedSuspects = computed(() => {
+  return Object.entries(store.placements)
+    .filter((e): e is [string, Position] => e[1] !== null)
+    .map(([suspectId, pos]) => ({ suspectId, pos, suspect: suspectById(suspectId)! }))
+})
 
 function cellStyle(row: number, col: number) {
   const cell = getCell(props.puzzle, row, col)!
@@ -67,6 +86,8 @@ function cellStyle(row: number, col: number) {
   const bottom = neighbor(row + 1, col)
 
   return {
+    gridColumn: gridLine(col),
+    gridRow: gridLine(row),
     borderTop: !top || top.roomId !== cell.roomId ? thick : thin,
     borderLeft: !left || left.roomId !== cell.roomId ? thick : thin,
     borderRight: !right || right.roomId !== cell.roomId ? thick : thin,
@@ -109,37 +130,42 @@ function onCellClick(row: number, col: number) {
       </span>
 
       <img
-        v-if="cell.furniture && !suspectAt[`${cell.row}-${cell.col}`]"
+        v-if="cell.furniture && !multiCellCellKeys.has(cellKey(cell.row, cell.col))"
         :src="FURNITURE_SPRITES[cell.furniture]"
-        class="w-[70%] h-[70%] object-contain opacity-90 [image-rendering:pixelated] pointer-events-none"
+        class="w-full h-full object-contain opacity-90 [image-rendering:pixelated] pointer-events-none"
         :alt="cell.furniture"
       />
+    </div>
 
-      <template v-if="suspectAt[`${cell.row}-${cell.col}`]">
-        <img
-          :src="
-            suspectById(suspectAt[`${cell.row}-${cell.col}`])?.isVictim
-              ? VICTIM_FACE
-              : facePathForSuspect(
-                  suspectAt[`${cell.row}-${cell.col}`],
-                  suspectById(suspectAt[`${cell.row}-${cell.col}`])!.gender,
-                )
-          "
-          class="w-[78%] h-[78%] object-contain [image-rendering:pixelated] pointer-events-none drop-shadow-md"
-          :style="{
-            filter: conflictedSuspectIds.has(suspectAt[`${cell.row}-${cell.col}`])
-              ? 'drop-shadow(0 0 4px #dc2626) drop-shadow(0 0 4px #dc2626)'
-              : '',
-          }"
-          :alt="suspectById(suspectAt[`${cell.row}-${cell.col}`])?.name"
-        />
-        <span
-          v-if="!suspectById(suspectAt[`${cell.row}-${cell.col}`])?.isVictim"
-          class="absolute bottom-[6%] right-[6%] w-[34%] aspect-square rounded-full bg-[#3d3428] text-white flex items-center justify-center text-[0.5rem] font-bold leading-none pointer-events-none ring-1 ring-[#fdf8ee]"
-        >
-          {{ suspectById(suspectAt[`${cell.row}-${cell.col}`])?.name.charAt(0) }}
-        </span>
-      </template>
+    <img
+      v-for="piece in multiCellPieces"
+      :key="piece.key"
+      :src="piece.src"
+      class="w-full h-full object-fill opacity-90 [image-rendering:pixelated] pointer-events-none"
+      :style="{ gridColumn: piece.gridColumn, gridRow: piece.gridRow }"
+      :alt="piece.key"
+    />
+
+    <div
+      v-for="p in placedSuspects"
+      :key="p.suspectId"
+      class="relative flex items-center justify-center pointer-events-none"
+      :style="{ gridColumn: gridLine(p.pos.col), gridRow: gridLine(p.pos.row) }"
+    >
+      <img
+        :src="p.suspect.isVictim ? VICTIM_FACE : facePathForSuspect(p.suspectId, p.suspect.gender)"
+        class="w-[78%] h-[78%] object-contain [image-rendering:pixelated] drop-shadow-md"
+        :style="{
+          filter: conflictedSuspectIds.has(p.suspectId) ? 'drop-shadow(0 0 4px #dc2626) drop-shadow(0 0 4px #dc2626)' : '',
+        }"
+        :alt="p.suspect.name"
+      />
+      <span
+        v-if="!p.suspect.isVictim"
+        class="absolute bottom-[6%] right-[6%] w-[34%] aspect-square rounded-full bg-[#3d3428] text-white flex items-center justify-center text-[0.5rem] font-bold leading-none ring-1 ring-[#fdf8ee]"
+      >
+        {{ p.suspect.name.charAt(0) }}
+      </span>
     </div>
   </div>
 </template>

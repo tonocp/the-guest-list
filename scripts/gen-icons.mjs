@@ -46,18 +46,16 @@ const targets = [
   { name: 'icon-192.png', size: 192, padding: 0 },
   { name: 'icon-512.png', size: 512, padding: 0 },
   { name: 'maskable-512.png', size: 512, padding: 64 }, // safe-zone padding for maskable icons
+  { name: 'apple-touch-icon.png', size: 180, padding: 0 },
 ]
 
+// Every icon is flattened onto the navy background — no alpha channel. iOS composites a
+// transparent apple-touch-icon over black, and install UIs expect opaque app icons.
 for (const t of targets) {
   const svg = iconSvg(t.size, { padding: t.padding })
-  await sharp(Buffer.from(svg)).png().toFile(`${outDir}/${t.name}`)
+  await sharp(Buffer.from(svg)).flatten({ background: '#1f2430' }).png().toFile(`${outDir}/${t.name}`)
   console.log('wrote', t.name)
 }
-
-// Apple touch icon (no transparency, standard size)
-const appleSvg = iconSvg(180, { padding: 0 })
-await sharp(Buffer.from(appleSvg)).png().toFile(`${outDir}/apple-touch-icon.png`)
-console.log('wrote apple-touch-icon.png')
 
 /** Favicon: a *simplified* variant of the same mark (dark navy, gold magnifying
  * glass, pastel grid), not just iconSvg() at a small size. Measured at real
