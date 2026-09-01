@@ -1,7 +1,6 @@
-// Counts must match SKIN_TONES/HAIR_COLORS in scripts/gen-sprites.mjs — same
-// hand-mirrored convention as furnitureIcons.ts mirroring the furniture sprite list.
-const SKIN_COUNT = 4
-const HAIR_COUNT = 5
+/** Must match SKIN_TONES/HAIR_COLORS in scripts/gen-sprites.mjs. */
+export const SKIN_COUNT = 4
+export const HAIR_COUNT = 5
 
 function hash(seed: string): number {
   let h = 0
@@ -9,11 +8,8 @@ function hash(seed: string): number {
   return h
 }
 
-/** Deterministically picks a face sprite for a suspect from their id: skin tone and
- * hair color are two independent hash draws (salted differently so they don't move
- * together), hair style follows gender. Not tied to the character's pool name — like
- * the old hue-tint it replaces, the same named character can look different across
- * separately generated puzzles, which is fine since each puzzle is a fresh scenario. */
+/** Deterministic face sprite from the suspect id: skin and hair are independent hash
+ * draws, hair style follows gender. */
 export function facePathForSuspect(id: string, gender: 'f' | 'm'): string {
   const skinIdx = hash(id) % SKIN_COUNT
   const hairIdx = hash(`${id}-hair`) % HAIR_COUNT

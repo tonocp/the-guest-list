@@ -47,10 +47,28 @@ const emit = defineEmits<{ close: [] }>()
         </div>
 
         <div>
-          <p class="font-semibold text-[#3d3428]">"Junto a" en las pistas</p>
+          <p class="font-semibold text-[#3d3428]">"Junto a" otra persona</p>
           <p>
-            Significa estar en la misma sala, o en la casilla justo al lado — aunque
-            estén en extremos opuestos de una sala con forma rara, cuenta igual.
+            Significa estar en la misma sala — aunque estén en extremos opuestos de una
+            sala con forma rara, cuenta igual.
+          </p>
+        </div>
+
+        <div>
+          <p class="font-semibold text-[#3d3428]">"Pegado a" un mueble</p>
+          <p>
+            Significa estar en la casilla del mueble o en una pegada a ella, siempre
+            dentro de la misma sala. Si el mueble ocupa varias casillas, vale estar
+            pegado a cualquiera de ellas.
+          </p>
+        </div>
+
+        <div>
+          <p class="font-semibold text-[#3d3428]">Pistas de mueble</p>
+          <p>
+            Cuando la pista sitúa a alguien <em>sobre</em> un mueble ("sentado en una
+            silla", "apoyado en un piano"), su casilla es la del mueble, no una de al
+            lado.
           </p>
         </div>
 

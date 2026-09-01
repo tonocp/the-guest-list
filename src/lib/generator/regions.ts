@@ -4,9 +4,7 @@ import { type RNG, pick, randInt, shuffle } from '../rng'
 export interface RegionGenOptions {
   size: number
   rng: RNG
-  /** Attempts at simultaneous-growth before falling back to straight-row regions. */
   maxAttempts?: number
-  /** Target number of *accepted* boundary swaps in the shape-variety pass. */
   jaggleSwaps?: number
 }
 
@@ -39,8 +37,6 @@ function neighbors(pos: Position, size: number): Position[] {
   return candidates.filter((p) => p.row >= 0 && p.row < size && p.col >= 0 && p.col < size)
 }
 
-/** Farthest-point-ish sampling: spreads seeds out, with enough randomness (via a
- * sampled candidate pool) that the same size produces varied layouts across seeds. */
 function pickSeeds(size: number, rng: RNG): Position[] {
   const all = allPositions(size)
   const seeds: Position[] = [pick(rng, all)]
@@ -67,8 +63,6 @@ interface Region {
   cells: Position[]
 }
 
-/** One simultaneous-growth attempt. Returns null if a region gets walled in before
- * reaching `size` cells (frontier goes empty while still short). */
 function tryGrow(size: number, rng: RNG): string[][] | null {
   const grid: (string | null)[][] = Array.from({ length: size }, () => Array(size).fill(null))
   const seeds = pickSeeds(size, rng)
@@ -78,7 +72,6 @@ function tryGrow(size: number, rng: RNG): string[][] | null {
   })
 
   while (regions.some((r) => r.cells.length < size)) {
-    // Frontier per still-growing region: unclaimed cells adjacent to one of its cells.
     const frontiers = new Map<string, Position[]>()
     for (const region of regions) {
       if (region.cells.length >= size) continue
@@ -97,14 +90,12 @@ function tryGrow(size: number, rng: RNG): string[][] | null {
     }
 
     let growing = regions.filter((r) => r.cells.length < size)
-    if (growing.some((r) => frontiers.get(r.id)!.length === 0)) return null // walled in
+    if (growing.some((r) => frontiers.get(r.id)!.length === 0)) return null
 
-    // Most-constrained-first: grow the smallest frontier first.
     growing = growing.sort((a, b) => frontiers.get(a.id)!.length - frontiers.get(b.id)!.length)
     const region = growing[0]
     const frontier = frontiers.get(region.id)!
 
-    // Prefer a frontier cell fewer *other* growing regions are also contesting.
     const contestCount = (pos: Position) =>
       growing.filter((r) => r.id !== region.id && frontiers.get(r.id)!.some((p) => p.row === pos.row && p.col === pos.col))
         .length
@@ -119,8 +110,6 @@ function tryGrow(size: number, rng: RNG): string[][] | null {
   return grid.map((row) => row.map((id) => id!))
 }
 
-/** Always-valid fallback: N straight rows of N cells. Only reached if growth keeps
- * failing, which most-constrained-first growth should make rare. */
 function rowStripFallback(size: number): string[][] {
   return Array.from({ length: size }, (_, row) => Array.from({ length: size }, () => `room-${row}`))
 }
@@ -137,8 +126,6 @@ function regionCells(grid: string[][], size: number): Map<string, Position[]> {
   return byRoom
 }
 
-/** Unbounded 4-directional offsets — bounds don't matter here since membership is
- * checked against `set`, not against the grid. */
 function orthogonalOffsets(pos: Position): Position[] {
   return [
     { row: pos.row - 1, col: pos.col },
@@ -168,8 +155,6 @@ function isConnected(cells: Position[]): boolean {
   return seen.size === cells.length
 }
 
-/** Random local swaps across region boundaries (kept only if both sides stay
- * connected) so rooms come out as staircase/L shapes, not just clean rectangles. */
 function jaggle(grid: string[][], size: number, rng: RNG, targetSwaps: number): string[][] {
   const next = grid.map((row) => row.slice())
   let accepted = 0
@@ -203,6 +188,8 @@ function jaggle(grid: string[][], size: number, rng: RNG, targetSwaps: number): 
   return next
 }
 
+/** Partitions the N×N grid into N connected rooms of N cells (simultaneous growth,
+ * then boundary swaps for non-rectangular shapes). Falls back to N straight rows. */
 export function generateRegions(options: RegionGenOptions): RegionAssignment {
   const { size, rng, maxAttempts = 200, jaggleSwaps = size * 2 } = options
 

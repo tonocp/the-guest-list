@@ -1,11 +1,9 @@
 # Generador procedural
 
-Todo vive bajo `src/lib/` (solver, RNG) y `src/lib/generator/` (todo lo demás), como
-funciones puras sin ningún import de Vue/Pinia — ver [`architecture.md`](./architecture.md).
-Punto de entrada: `generatePuzzle({ difficulty, seed? }): Puzzle`
-(`src/lib/generator/generatePuzzle.ts`).
+Todo bajo `src/lib/` (solver, RNG) y `src/lib/generator/` (el resto), funciones puras
+sin imports de Vue/Pinia. Entrada: `generatePuzzle({ difficulty, seed? }): Puzzle`.
 
-## Mapeo dificultad → tamaño
+## Dificultad → tamaño
 
 | Dificultad | Tamaño |
 |---|---|
@@ -28,56 +26,60 @@ flowchart TD
     I -.reintento si falla cualquier paso.-> A
 ```
 
-Todo el pipeline está envuelto en un reintento acotado (20 intentos por defecto): un
-fallo en cualquier paso descarta el intento entero y prueba con una sub-semilla nueva,
-derivada de la semilla maestra para mantener reproducibilidad.
+Reintento acotado (20 intentos): un fallo en cualquier paso descarta el intento y
+prueba otra sub-semilla, derivada de la semilla maestra para no perder reproducibilidad.
 
-## El solver (`src/lib/solver.ts`)
+## Solver (`solver.ts`)
 
-Backtracking con variable = sospechoso, usando **MRV** (most-remaining-values): en
-cada nodo, coloca primero al sospechoso sin colocar con menos celdas candidatas
-válidas. Las reglas unarias (`room`, `on-furniture`, `near-furniture`) anclan a una
-posición antes de empezar la búsqueda; las binarias (`direction`, `adjacent`) se
-comprueban de forma incremental (forward-checking). Corta la búsqueda en cuanto
-encuentra 2 soluciones distintas — nunca hace falta saber cuántas hay, solo si es
-única. Incluye un tope de nodos explorados como cinturón de seguridad frente a
-combinaciones de reglas patológicas.
+Backtracking con variable = sospechoso y **MRV** (coloca primero al sospechoso con
+menos celdas candidatas). Reglas unarias (`room`, `on-furniture`, `near-furniture`)
+anclan el dominio antes de buscar; binarias (`direction`, `adjacent`) se comprueban
+por forward-checking. Corta al encontrar 2 soluciones. Tope de nodos (`maxNodes`) como
+cinturón de seguridad frente a combinaciones patológicas — no quitarlo (ver "Trampas
+conocidas" en [`for-agents.md`](./for-agents.md)).
 
-API pública: `countSolutions(input, cap?, maxNodes?): SolveResult`,
-`hasUniqueSolution(input, maxNodes?): boolean`.
+API: `countSolutions(input, cap?, maxNodes?)`, `hasUniqueSolution(input, maxNodes?)`.
 
-## Generador de salas (`generator/regions.ts`)
+## Regiones (`generator/regions.ts`)
 
-Partición de la cuadrícula NxN en N regiones conexas de N celdas: semillas
-repartidas por muestreo, crecimiento simultáneo (la región con menos frontera crece
-primero), y una pasada de variedad de forma (intercambios locales entre celdas de
-borde) para que salgan formas en escalera/L, no solo bloques rectangulares.
+Partición de la cuadrícula N×N en N regiones conexas de N celdas: semillas repartidas,
+crecimiento simultáneo (crece primero la región con menos frontera), y una pasada de
+intercambios de borde para dar formas en escalera/L en vez de bloques rectos.
 
-## Selección de víctima (`generator/victim.ts`)
+## Víctima (`generator/victim.ts`)
 
-Prueba permutaciones de solución aleatorias hasta encontrar una donde alguna sala
-tenga **exactamente 2** ocupantes — necesario para que el asesino quede bien definido
-(ver [`game-rules.md`](./game-rules.md)).
+Prueba permutaciones de solución aleatorias (sin solver) hasta dar con una donde
+alguna sala tenga **exactamente 2** ocupantes — requisito para que el asesino quede
+bien definido.
 
-## Mobiliario y pistas
+## Mobiliario (`generator/furniture.ts`)
 
-Hasta una instancia única de cada tipo de mobiliario (12 tipos), anclada en la celda
-de un sospechoso no-víctima distinto cada vez. `rug` y `sofa` pueden extenderse 1-2
-celdas más allá de su ancla dentro de la misma sala (`rug` en línea recta, `sofa` en
-forma de L/esquina, con caída a recta y luego a 1 celda si no cabe) — el resto de
-tipos siguen ocupando exactamente 1 celda. Cada sospechoso muestra como mucho una
-pista (`Suspect.clue` es un único string): se le da su hecho unario más fuerte
-disponible (`on-furniture` > `room` > `near-furniture`), y luego se minimiza el
-conjunto quitando reglas mientras la solución siga siendo única.
+Hasta una instancia de cada tipo (13), anclada en la celda de un sospechoso no-víctima
+distinto.
+
+- `rug`/`sofa`/`screen` crecen dentro de la misma sala y **degradan** si no hay hueco
+  (una alfombra, un panel de biombo o un sofá recto de 1 celda siguen siendo creíbles).
+- `bed`/`piano` (`MUST_GROW_TYPES`) se asignan aparte (`assignMustGrow`) y **nunca**
+  caen a 1 celda: si nadie tiene hueco para 2, el tipo se descarta del caso.
+- El resto siempre ocupa 1 celda.
+
+## Pistas (`clueFacts.ts` → `selectClues.ts` → `clueText.ts`)
+
+`enumerateFacts` lista todo hecho verdadero de la solución. `selectClues` da a cada
+sospechoso su hecho más fuerte (`on-furniture` > `room` > `near-furniture`), confirma
+que el conjunto es único y lo minimiza quitando reglas redundantes.
+
+En la práctica solo salen `room` y `on-furniture`: todo sospechoso tiene un `room` que
+supera a `near-furniture`, y `direction`/`adjacent` están excluidas (fuerza −1) para
+no acercarse al caso patológico del solver. El texto de `on-furniture` siempre sitúa a
+la persona *sobre* la celda del mueble (guardarraíl en `clueText.test.ts`), nunca
+«junto a»/«pegado a», que son la redacción de `near-furniture`.
 
 ## Limitaciones conocidas
 
-- Los casos generados solo usan pistas de sala/mobiliario — nunca `direction` o
-  `adjacent` (los casos hechos a mano sí las usan, con más variedad narrativa).
-- Solo `rug`/`sofa` ocupan más de una celda; el resto sigue anclado a 1 celda. Ampliar
-  esto a más tipos, o a formas más variadas, es trabajo futuro.
-- El solver garantiza unicidad matemática de la solución, no que sea resoluble sin
-  tanteo en algún punto.
+- Los casos generados solo usan pistas de sala/mobiliario. Variedad narrativa
+  (`direction`/`adjacent`) es trabajo futuro.
+- Solo `rug`/`bed`/`piano`/`sofa`/`screen` ocupan más de una celda.
+- El solver garantiza unicidad matemática, no que el caso sea resoluble sin tanteo.
 
-`scripts/stress-generate.ts` genera un lote de semillas × dificultades y reporta tasa
-de éxito y tiempos — ejecutar tras cualquier cambio al pipeline.
+Tras cualquier cambio al pipeline, corre `scripts/stress-generate.ts`.

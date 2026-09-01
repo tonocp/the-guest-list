@@ -20,13 +20,9 @@ function randomSolution(size: number, suspectIds: string[], rng: RNG): Record<st
   return solution
 }
 
-/**
- * Tries random solution permutations (cheap — no solver call) against the given room
- * partition until it finds one where some room ends up with *exactly* two occupants.
- * That's a hard requirement, not just nice-to-have: `getMurderer` in gridLogic.ts
- * picks the victim's roommate via `.find()`, so a room with 3+ occupants would make
- * "who's the murderer" arbitrary rather than well-defined.
- */
+/** Tries random solution permutations until one has a room with *exactly* two
+ * occupants (victim + murderer). Required — a 3+ occupant room makes the murderer
+ * ill-defined. */
 export function selectVictim(
   size: number,
   suspectIds: string[],

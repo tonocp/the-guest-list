@@ -1,28 +1,27 @@
 # Arquitectura
 
-Stack: Vue 3 (`<script setup>`, Composition API) + TypeScript + Vite + Pinia +
-vue-router + Tailwind v4. PWA instalable y offline vía `vite-plugin-pwa` (Workbox).
+Vue 3 (`<script setup>`) + TypeScript + Vite + Pinia + vue-router + Tailwind v4. PWA
+instalable y offline vía `vite-plugin-pwa` (Workbox).
 
 ## Capas
 
 ```
-types/                → contrato de datos (no depende de nada)
-lib/                   → lógica de dominio pura (solo depende de types/, cero Vue/Pinia)
-lib/persistence/        → puerto GameRepository + adapter IndexedDB (ver persistence.md)
-data/puzzles/             → contenido: casos hechos a mano + resolvePuzzle(id)
-stores/                     → estado de sesión de partida (Pinia), delega reglas a lib/
-views/, components/          → UI "tonta": lee del store, no reimplementa reglas
-scripts/                      → herramientas de desarrollo (verificación, generación de assets)
+types/               contrato de datos (no depende de nada)
+lib/                  lógica de dominio pura (solo types/, cero Vue/Pinia)
+lib/persistence/      puerto GameRepository + adapter IndexedDB
+data/resolvePuzzle.ts regenera el Puzzle jugable desde el SavedGame
+stores/              estado de sesión (Pinia), delega reglas en lib/
+views/, components/   UI: leen del store, no reimplementan reglas
+scripts/             herramientas de desarrollo
 ```
 
-La dirección de dependencia es estricta: cada capa solo conoce la de abajo. Nunca hay
-un import "hacia arriba".
+Dependencia estricta hacia abajo, nunca hacia arriba.
 
 ## El contrato central: `Puzzle`
 
-Todo el sistema gira en torno al tipo `Puzzle` (`src/types/puzzle.ts`). El store, los
-componentes de UI y el generador procedural solo saben consumir/producir un objeto
-`Puzzle` — no importa si salió escrito a mano o generado en tiempo de ejecución.
+Todo gira en torno a `Puzzle` (`src/types/puzzle.ts`). Store, UI y generador solo saben
+consumir/producir un `Puzzle`. Hoy todos los casos se generan, pero nada aguas abajo
+depende de eso: cualquier `Puzzle` válido es igual de jugable.
 
 ```ts
 interface Puzzle {
@@ -31,51 +30,41 @@ interface Puzzle {
   size: number
   difficulty: Difficulty
   rooms: Room[]
-  cells: Cell[]              // grid completo, size×size, con roomId + mueble opcional
-  suspects: Suspect[]        // incluye a la víctima, con isVictim: true
+  cells: Cell[]                       // grid size×size, roomId + mueble opcional
+  suspects: Suspect[]                 // incluye la víctima (isVictim: true)
   solution: Record<string, Position>  // suspectId -> {row, col}
-  rules: ClueRule[]          // predicados estructurados, usados por el solver
+  rules: ClueRule[]                   // predicados estructurados, usados por el solver
 }
 ```
 
-Ver [`game-rules.md`](./game-rules.md) para el significado de cada campo, y
-[`procedural-generator.md`](./procedural-generator.md) para cómo se construye un
-`Puzzle` desde cero.
+Significado de cada campo: [`game-rules.md`](./game-rules.md). Cómo se construye:
+[`procedural-generator.md`](./procedural-generator.md).
 
-## Lógica de dominio pura (`src/lib/`)
+## Dominio puro (`src/lib/`)
 
-- **`gridLogic.ts`** — las reglas del juego como funciones puras: `isNextTo`,
-  `getConflicts`, `isComplete`, `matchesSolution`, `getMurderer`.
-- **`solver.ts`** — resuelve/cuenta soluciones para un conjunto de reglas dado
-  (backtracking + poda). Ver [`procedural-generator.md`](./procedural-generator.md).
-- **`rng.ts`** — PRNG determinista (mulberry32) para que el generador sea reproducible
-  por semilla.
-- **`furnitureIcons.ts`** — mapa `FurnitureType` → ruta de sprite.
-- **`suspectFace.ts`** — hash determinista de `suspectId` → sprite de cara (tono de
-  piel + color de pelo), con el estilo de pelo según `gender`. Ver
-  [`visual-design.md`](./visual-design.md).
-- **`generator/`** — el generador procedural completo, ver el documento dedicado.
-- **`persistence/`** — puerto `GameRepository` + adapter IndexedDB — ver
-  [`persistence.md`](./persistence.md).
+- **`gridLogic.ts`** — reglas del juego como funciones puras (`isNextTo`,
+  `getConflicts`, `getMurderer`…) y el agrupado de piezas de mobiliario multi-celda
+  (`furniturePieces`/`pieceShape`/`multiCellFurniturePlacements`, ver
+  [`visual-design.md`](./visual-design.md)).
+- **`solver.ts`** — resuelve/cuenta soluciones para un conjunto de reglas.
+- **`rng.ts`** — PRNG determinista (mulberry32).
+- **`furnitureIcons.ts`** — `FurnitureType` → ruta de sprite (+ variantes conectadas).
+- **`suspectFace.ts`** — hash de `suspectId` → sprite de cara.
+- **`generator/`** — generador procedural completo.
+- **`persistence/`** — puerto `GameRepository` + adapter IndexedDB.
 
 ## Estado (`src/stores/puzzleStore.ts`)
 
-Un único store Pinia con el estado de la partida *actual*: colocaciones, sospechoso
-seleccionado, historial de deshacer, pistas usadas, si se ha ganado. `load(id)` (async)
-resuelve el `Puzzle` y restaura el progreso guardado si existe; `persist()` autoguarda
-tras cada acción que muta el tablero. Las acciones delegan a `gridLogic.ts` para
-detectar conflictos/victoria en vez de reimplementar esa lógica.
+Un store Pinia con la partida actual: colocaciones, sospechoso seleccionado, historial
+de deshacer, pistas, victoria. `load(id)` regenera el `Puzzle` y restaura el progreso
+guardado; `persist()` autoguarda tras cada mutación del tablero. Las acciones delegan
+en `gridLogic.ts` para conflictos/victoria.
 
-## UI (`src/views/`, `src/components/`)
+## UI y enrutado
 
-- **Vistas**: `PuzzleListView.vue` (elegir/generar caso), `PlayView.vue` (pantalla de
-  juego).
-- **Componentes**: `BoardGrid.vue`, `SuspectCard.vue`, `ActionBar.vue`
-  (resetear/deshacer/pista), `WinModal.vue`, `HelpModal.vue` (reglas del juego).
+Vistas: `PuzzleListView.vue` (elegir/generar), `PlayView.vue` (juego). Componentes:
+`BoardGrid.vue`, `SuspectCard.vue`, `ActionBar.vue`, `WinModal.vue`, `HelpModal.vue`.
 
-## Enrutado
-
-Dos rutas (`src/router/index.ts`): `/` (tus partidas guardadas) y `/play/:id`. Un caso
-generado procedimentalmente no vive en ningún registro estático — `resolvePuzzle(id)`
-lo reconstruye bajo demanda desde su `{ seed, difficulty }` guardado, así que
-sobrevive a recargar la página o cerrar la app. Ver [`persistence.md`](./persistence.md).
+Rutas (`src/router/index.ts`): `/` (partidas guardadas), `/play/:id`, `/furni`
+(depuración de sprites, no enlazada). Un caso no vive en ningún registro estático:
+`resolvePuzzle(id)` lo reconstruye desde su `{ seed, difficulty }` guardado.

@@ -1,14 +1,18 @@
-import type { Cell, Position, Puzzle } from '../types/puzzle'
+import type { Cell, FurnitureType, Position, Puzzle } from '../types/puzzle'
 
 export function cellKey(row: number, col: number): string {
   return `${row}-${col}`
+}
+
+export function gridLine(start: number, end: number = start): string {
+  return `${start + 1} / ${end + 2}`
 }
 
 export function getCell(puzzle: Pick<Puzzle, 'cells'>, row: number, col: number): Cell | undefined {
   return puzzle.cells.find((c) => c.row === row && c.col === col)
 }
 
-/** Two positions are "junto a" (next to) each other: orthogonally adjacent, or sharing a room. */
+/** "Junto a": orthogonally adjacent, or sharing a room. */
 export function isNextTo(puzzle: Pick<Puzzle, 'cells'>, a: Position, b: Position): boolean {
   const orthogonal =
     (a.row === b.row && Math.abs(a.col - b.col) === 1) ||
@@ -20,6 +24,15 @@ export function isNextTo(puzzle: Pick<Puzzle, 'cells'>, a: Position, b: Position
   return !!cellA && !!cellB && cellA.roomId === cellB.roomId
 }
 
+/** "Pegado a" un mueble: same room and at most one orthogonal step away (the cell
+ * itself counts). Never reaches across a room boundary, unlike people's "junto a". */
+export function isBesideFurniture(suspectCell: Cell, furnitureCell: Cell): boolean {
+  return (
+    suspectCell.roomId === furnitureCell.roomId &&
+    Math.abs(suspectCell.row - furnitureCell.row) + Math.abs(suspectCell.col - furnitureCell.col) <= 1
+  )
+}
+
 export type Placements = Record<string, Position | null>
 
 export interface Conflict {
@@ -27,10 +40,8 @@ export interface Conflict {
   reason: 'row' | 'col'
 }
 
-/**
- * Live feedback: which placed suspects currently break the one-per-row/one-per-col rule.
- * Rooms are NOT exclusive — several suspects may share a room, so sharing one is never a conflict.
- */
+/** Placed suspects that currently break the one-per-row/one-per-col rule (rooms are
+ * never a conflict). */
 export function getConflicts(_puzzle: Puzzle, placements: Placements): Conflict[] {
   const conflicts: Conflict[] = []
   const entries = Object.entries(placements).filter(
@@ -60,7 +71,87 @@ export function matchesSolution(puzzle: Puzzle, placements: Placements): boolean
   })
 }
 
-/** The suspect adjacent to the victim in the true solution is the murderer. */
+export interface FurniturePiece {
+  type: FurnitureType
+  cells: Position[]
+  minRow: number
+  maxRow: number
+  minCol: number
+  maxCol: number
+  /** Set only for an L-shaped 3-cell piece (the sofa): a 2x2 bounding box with one
+   * corner empty. */
+  missingCorner?: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
+}
+
+/** Groups furnished cells into pieces by type. Each `FurnitureType` appears at most
+ * once per puzzle, so cells of one type are the same piece. */
+export function furniturePieces(puzzle: Pick<Puzzle, 'cells'>): FurniturePiece[] {
+  const byType = new Map<FurnitureType, Position[]>()
+  for (const cell of puzzle.cells) {
+    if (!cell.furniture) continue
+    const list = byType.get(cell.furniture) ?? []
+    list.push({ row: cell.row, col: cell.col })
+    byType.set(cell.furniture, list)
+  }
+
+  const pieces: FurniturePiece[] = []
+  for (const [type, cells] of byType) {
+    const minRow = Math.min(...cells.map((c) => c.row))
+    const maxRow = Math.max(...cells.map((c) => c.row))
+    const minCol = Math.min(...cells.map((c) => c.col))
+    const maxCol = Math.max(...cells.map((c) => c.col))
+
+    let missingCorner: FurniturePiece['missingCorner']
+    if (cells.length === 3 && minRow !== maxRow && minCol !== maxCol) {
+      const has = (row: number, col: number) => cells.some((c) => c.row === row && c.col === col)
+      if (!has(minRow, minCol)) missingCorner = 'topLeft'
+      else if (!has(minRow, maxCol)) missingCorner = 'topRight'
+      else if (!has(maxRow, minCol)) missingCorner = 'bottomLeft'
+      else missingCorner = 'bottomRight'
+    }
+
+    pieces.push({ type, cells, minRow, maxRow, minCol, maxCol, missingCorner })
+  }
+  return pieces
+}
+
+export type PieceShape = 'single' | 'h2' | 'v2' | 'h3' | 'v3' | 'L'
+
+/** Which pre-baked sprite shape renders a piece. 'L' is a genuine L (spans both rows
+ * and cols); a straight 3-cell run is 'h3'/'v3'. */
+export function pieceShape(piece: FurniturePiece): PieceShape {
+  if (piece.cells.length === 1) return 'single'
+  const horizontal = piece.minRow === piece.maxRow
+  const straight = horizontal || piece.minCol === piece.maxCol
+  if (piece.cells.length === 3) return straight ? (horizontal ? 'h3' : 'v3') : 'L'
+  return horizontal ? 'h2' : 'v2'
+}
+
+export interface MultiCellFurniturePlacement {
+  type: FurnitureType
+  cells: Position[]
+  shape: PieceShape
+  missingCorner?: FurniturePiece['missingCorner']
+  gridColumn: string
+  gridRow: string
+}
+
+/** Grid placement for every furniture piece spanning more than 1 cell (1-cell pieces
+ * render as a normal per-cell icon). Deliberately takes no `Placements`: a piece must
+ * always render in full, never hidden by a suspect standing on one of its cells. */
+export function multiCellFurniturePlacements(puzzle: Pick<Puzzle, 'cells'>): MultiCellFurniturePlacement[] {
+  return furniturePieces(puzzle)
+    .filter((piece) => piece.cells.length > 1)
+    .map((piece) => ({
+      type: piece.type,
+      cells: piece.cells,
+      shape: pieceShape(piece),
+      missingCorner: piece.missingCorner,
+      gridColumn: gridLine(piece.minCol, piece.maxCol),
+      gridRow: gridLine(piece.minRow, piece.maxRow),
+    }))
+}
+
 export function getMurderer(puzzle: Puzzle): string | undefined {
   const victim = puzzle.suspects.find((s) => s.isVictim)
   if (!victim) return undefined

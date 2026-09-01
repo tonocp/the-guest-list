@@ -1,19 +1,22 @@
 import type { ClueRule, FurnitureType } from '../../types/puzzle'
 import type { ThemeRoom } from './roomThemes'
 
-const FURNITURE_PHRASE: Record<FurnitureType, string> = {
+/** For the `near-furniture` clue only. All indefinite so "pegado a {phrase}" never
+ * needs the "a el" → "al" contraction. */
+export const FURNITURE_PHRASE: Record<FurnitureType, string> = {
   plant: 'una planta',
   rug: 'una alfombra',
   chair: 'una silla',
-  bookshelf: 'una estantería',
-  sofa: 'el sofá',
-  window: 'la ventana',
-  painting: 'un cuadro',
+  piano: 'un piano de cola',
+  sofa: 'un sofá',
+  bed: 'una cama',
+  chest: 'un baúl',
   lamp: 'una lámpara',
   table: 'una mesa',
-  mirror: 'un espejo',
-  clock: 'un reloj',
+  statue: 'una estatua',
+  globe: 'un globo terráqueo',
   vase: 'un jarrón',
+  screen: 'un biombo',
 }
 
 const DIRECTION_LABEL: Record<'N' | 'S' | 'E' | 'W', string> = {
@@ -23,33 +26,38 @@ const DIRECTION_LABEL: Record<'N' | 'S' | 'E' | 'W', string> = {
   W: 'oeste',
 }
 
+/** Phrasing must read as *on* the cell (guarded by clueText.test.ts), and hold for any
+ * cell of a multi-cell piece. */
 function onFurnitureText(furniture: FurnitureType, gender: 'f' | 'm'): string {
-  const sentado = gender === 'f' ? 'sentada' : 'sentado'
+  const g = (m: string, f: string) => (gender === 'f' ? f : m)
+  const sentado = g('sentado', 'sentada')
   switch (furniture) {
     case 'chair':
       return `Estaba ${sentado} en una silla.`
     case 'sofa':
       return `Estaba ${sentado} en el sofá.`
+    case 'chest':
+      return `Estaba ${sentado} sobre un baúl.`
+    case 'table':
+      return `Estaba ${sentado} a una mesa.`
+    case 'bed':
+      return `Estaba ${g('tumbado', 'tumbada')} en la cama.`
     case 'rug':
       return 'Estaba de pie sobre una alfombra.'
-    case 'bookshelf':
-      return 'Estaba justo al lado de la estantería.'
-    case 'plant':
-      return 'Estaba junto a una planta.'
-    case 'window':
-      return 'Estaba junto a la ventana.'
-    case 'painting':
-      return 'Estaba contemplando un cuadro.'
     case 'lamp':
-      return 'Tenía una lámpara justo a su lado.'
-    case 'table':
-      return 'Estaba de pie junto a una mesa.'
-    case 'mirror':
-      return 'Estaba frente a un espejo.'
-    case 'clock':
-      return 'Estaba justo debajo de un reloj.'
+      return 'Estaba de pie bajo una lámpara.'
+    case 'piano':
+      return `Estaba ${g('apoyado', 'apoyada')} en un piano de cola.`
+    case 'plant':
+      return `Estaba ${g('escondido', 'escondida')} tras una planta.`
+    case 'screen':
+      return `Estaba ${g('oculto', 'oculta')} tras un biombo.`
+    case 'statue':
+      return 'Tenía la mano sobre una estatua.'
+    case 'globe':
+      return 'Estaba haciendo girar un globo terráqueo.'
     case 'vase':
-      return 'Estaba junto a un jarrón.'
+      return 'Sostenía un jarrón entre las manos.'
   }
 }
 
@@ -58,8 +66,8 @@ export interface ClueTextContext {
   roomDisplay: (roomId: string) => ThemeRoom
 }
 
-/** `ownerGender` is the gender of the suspect this clue is displayed on (the rule's
- * `suspect` / `subject` / `a`, depending on type) — needed for "sentado"/"sentada". */
+/** `ownerGender` is the gender of the suspect the clue is shown on — needed for
+ * "sentado"/"sentada". */
 export function clueText(rule: ClueRule, ownerGender: 'f' | 'm', ctx: ClueTextContext): string {
   switch (rule.type) {
     case 'room': {
@@ -70,7 +78,8 @@ export function clueText(rule: ClueRule, ownerGender: 'f' | 'm', ctx: ClueTextCo
       return onFurnitureText(rule.furniture, ownerGender)
     case 'near-furniture': {
       const phrase = FURNITURE_PHRASE[rule.furniture]
-      return rule.negate ? `No estaba junto a ${phrase}.` : `Estaba junto a ${phrase}.`
+      const pegado = ownerGender === 'f' ? 'pegada' : 'pegado'
+      return rule.negate ? `No estaba ${pegado} a ${phrase}.` : `Estaba ${pegado} a ${phrase}.`
     }
     case 'direction':
       return `Estaba al ${DIRECTION_LABEL[rule.dir]} de ${ctx.suspectName(rule.reference)}.`
