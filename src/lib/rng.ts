@@ -1,8 +1,8 @@
-/** Deterministic [0, 1) generator. Every random decision in the generator pipeline
- * must draw from one of these, never `Math.random()`, so a `seed` is reproducible. */
+/** Deterministic [0, 1) generator. Every random decision in the generator must draw
+ * from one of these, never `Math.random()`, so a `seed` stays reproducible. */
 export type RNG = () => number
 
-/** mulberry32 — small, fast, good-enough distribution for puzzle generation (not crypto). */
+/** mulberry32 — small, fast, not crypto. */
 export function createRng(seed: number): RNG {
   let a = seed >>> 0
   return () => {
@@ -14,12 +14,10 @@ export function createRng(seed: number): RNG {
   }
 }
 
-/** Random integer in [0, max). */
 export function randInt(rng: RNG, max: number): number {
   return Math.floor(rng() * max)
 }
 
-/** Fisher-Yates, using the given RNG. Does not mutate the input. */
 export function shuffle<T>(rng: RNG, items: readonly T[]): T[] {
   const result = items.slice()
   for (let i = result.length - 1; i > 0; i--) {
@@ -29,7 +27,6 @@ export function shuffle<T>(rng: RNG, items: readonly T[]): T[] {
   return result
 }
 
-/** Pick one element at random. */
 export function pick<T>(rng: RNG, items: readonly T[]): T {
   return items[randInt(rng, items.length)]
 }

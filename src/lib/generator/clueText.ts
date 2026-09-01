@@ -1,11 +1,8 @@
 import type { ClueRule, FurnitureType } from '../../types/puzzle'
 import type { ThemeRoom } from './roomThemes'
 
-// All indefinite ("un"/"una") so "pegado a {phrase}" never needs the "a el" → "al"
-// contraction. Only used by the `near-furniture` clue (which `selectClues` never picks
-// for generated puzzles today — a `room` fact always outranks it — but the rule type is
-// fully plumbed for the room-variety follow-up; see procedural-generator.md).
-// `on-furniture` has its own wording per type in `onFurnitureText`.
+/** For the `near-furniture` clue only. All indefinite so "pegado a {phrase}" never
+ * needs the "a el" → "al" contraction. */
 export const FURNITURE_PHRASE: Record<FurnitureType, string> = {
   plant: 'una planta',
   rug: 'una alfombra',
@@ -29,13 +26,8 @@ const DIRECTION_LABEL: Record<'N' | 'S' | 'E' | 'W', string> = {
   W: 'oeste',
 }
 
-/**
- * Every phrasing must place the suspect *on the furniture's own cell* — never merely
- * beside it, so it can't be misread as `near-furniture` ("pegado a"). For the types
- * that can span more than one cell (`rug`/`sofa`/`bed`/`piano`/`screen`) the phrasing
- * also has to hold for *any* cell of the piece, so nothing implies a specific end
- * (e.g. the piano is "apoyado en", not "tocando", which would mean the keyboard cell).
- */
+/** Phrasing must read as *on* the cell (guarded by clueText.test.ts), and hold for any
+ * cell of a multi-cell piece. */
 function onFurnitureText(furniture: FurnitureType, gender: 'f' | 'm'): string {
   const g = (m: string, f: string) => (gender === 'f' ? f : m)
   const sentado = g('sentado', 'sentada')
@@ -74,8 +66,8 @@ export interface ClueTextContext {
   roomDisplay: (roomId: string) => ThemeRoom
 }
 
-/** `ownerGender` is the gender of the suspect this clue is displayed on (the rule's
- * `suspect` / `subject` / `a`, depending on type) — needed for "sentado"/"sentada". */
+/** `ownerGender` is the gender of the suspect the clue is shown on — needed for
+ * "sentado"/"sentada". */
 export function clueText(rule: ClueRule, ownerGender: 'f' | 'm', ctx: ClueTextContext): string {
   switch (rule.type) {
     case 'room': {

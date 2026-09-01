@@ -5,32 +5,16 @@ import { CONNECTABLE_FURNITURE_SPRITES, FURNITURE_SPRITES } from '../lib/furnitu
 import { MUST_GROW_TYPES } from '../lib/generator/furniture'
 import { HAIR_COUNT, SKIN_COUNT, VICTIM_FACE } from '../lib/suspectFace'
 
-/** Debug-only route (`/furni`, see router/index.ts) — not linked from anywhere in the
- * app UI. Shows every furniture sprite a generated map can actually produce (and every
- * suspect face sprite) at the exact size/placement BoardGrid.vue uses (`w-full h-full`,
- * same floor-dither cell background — every sprite, solo or multi-cell, is drawn at
- * 100% of its cell and relies entirely on its own baked-in `FURNITURE_MARGIN` inset for
- * the gap to the cell edge, see gen-sprites.mjs), so a visual glitch or style tweak can
- * be checked here without generating puzzles until one happens to include the right
- * furniture/face combo. "A generated map can actually produce" excludes `bed`/`piano`
- * from the 1-cell section (see `SOLO_ONLY_TYPES`) but not from multi-cell, since e.g.
- * `bed-h2/v2` are exactly what the generator does produce. Delete this file + its route
- * once the art is settled — see AGENTS.md on not leaving one-off debug scaffolding past
- * its usefulness. */
+/** Debug-only route (`/furni`), not linked from the UI. Shows every furniture and face
+ * sprite a generated map can produce, at BoardGrid.vue's size. Delete with its route
+ * once the art is settled. */
 
 const WALL_COLOR = '#3d3428'
 const DIVIDER_COLOR = 'rgba(61,52,40,0.25)'
 const ROOM_COLOR = '#dbe7f7'
 const CELL_REM = 6
 
-// `bed`/`piano` are excluded here even though `FURNITURE_SPRITES` has entries for both
-// (kept for type completeness and as a safety net for a possible future hand-authored
-// puzzle) — the procedural generator never actually places either at 1 cell:
-// `assignMustGrow` in generator/furniture.ts drops them from the puzzle entirely
-// instead of falling back, unlike `rug`/`sofa`/`screen`, which do legitimately end up
-// at 1 cell sometimes and so still belong here. This list is "what a generated map can
-// actually show", not "every type FURNITURE_SPRITES happens to have an entry for".
-const SOLO_ONLY_TYPES = (Object.keys(FURNITURE_SPRITES) as FurnitureType[]).filter(
+const oneCellTypes = (Object.keys(FURNITURE_SPRITES) as FurnitureType[]).filter(
   (type) => !MUST_GROW_TYPES.includes(type),
 )
 
@@ -42,7 +26,7 @@ interface Swatch {
 }
 
 const soloSwatches = computed<Swatch[]>(() =>
-  SOLO_ONLY_TYPES.map((type) => ({ label: type, cols: 1, rows: 1, src: FURNITURE_SPRITES[type] })),
+  oneCellTypes.map((type) => ({ label: type, cols: 1, rows: 1, src: FURNITURE_SPRITES[type] })),
 )
 
 const rugSprites = CONNECTABLE_FURNITURE_SPRITES.rug!

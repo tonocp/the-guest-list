@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import type { FurnitureType } from '../../types/puzzle'
 import { clueText, FURNITURE_PHRASE, type ClueTextContext } from './clueText'
 
-// Derived from the type-checked Record so a new FurnitureType can't slip past the guardrail.
 const FURNITURE_TYPES = Object.keys(FURNITURE_PHRASE) as FurnitureType[]
 
 const ctx: ClueTextContext = {
@@ -10,12 +9,7 @@ const ctx: ClueTextContext = {
   roomDisplay: () => ({ name: 'Sala', article: 'la' }),
 }
 
-/**
- * Guardrail: `on-furniture` means the suspect stands on the furniture's own cell — the
- * single strongest clue in the game. Its text must never borrow the wording of the
- * weaker proximity clues ("junto a" for people, "pegado a" for furniture), or a player
- * reading it literally would widen a 1-cell fact into a whole neighbourhood.
- */
+/** Guardrail: `on-furniture` text must never read as proximity ("junto a"/"pegado a"). */
 describe('on-furniture clue text', () => {
   const PROXIMITY_WORDING = /junto a|pegad[oa] a|al lado|cerca de|a un paso/i
 

@@ -8,7 +8,6 @@ export const router = createRouter({
   routes: [
     { path: '/', name: 'list', component: PuzzleListView },
     { path: '/play/:id', name: 'play', component: PlayView },
-    // Debug-only, not linked from the UI — see FurnitureDebugView.vue's doc comment.
     { path: '/furni', name: 'furniture-debug', component: FurnitureDebugView },
   ],
 })

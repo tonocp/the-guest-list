@@ -9,14 +9,7 @@ import { facePathForSuspect, VICTIM_FACE } from '../lib/suspectFace'
 const props = defineProps<{ puzzle: Puzzle }>()
 const store = usePuzzleStore()
 
-const ROOM_COLORS = [
-  '#dbe7f7', // blue
-  '#f3ddef', // pink
-  '#d9f0e3', // green
-  '#fbe7cf', // orange
-  '#e6dff5', // purple
-  '#fdf1c7', // yellow
-]
+const ROOM_COLORS = ['#dbe7f7', '#f3ddef', '#d9f0e3', '#fbe7cf', '#e6dff5', '#fdf1c7']
 
 const WALL_COLOR = '#3d3428'
 const DIVIDER_COLOR = 'rgba(61,52,40,0.25)'
@@ -47,25 +40,11 @@ function suspectById(id: string) {
   return props.puzzle.suspects.find((s) => s.id === id)
 }
 
-/** Multi-cell rug/sofa pieces — geometry from `multiCellFurniturePlacements`
- * (gridLogic.ts), computed once and shared by `multiCellPieces` (what to render) and
- * `multiCellCellKeys` (which per-cell icons to suppress below) so the grouping pass
- * doesn't run twice per board render. Deliberately never sees suspect placements — the
- * piece always renders in full, never hidden by a suspect standing on one of its cells
- * (see that function's doc comment). `placedSuspects` below is drawn afterwards, on top
- * of these, so a suspect face is still visible rather than covered by the piece under
- * it. */
 const multiCellPlacements = computed(() => multiCellFurniturePlacements(props.puzzle))
 
-/** One image per multi-cell piece, spanning its cells via CSS grid placement — a real
- * multi-cell bitmap has no seam to keep pixel-aligned across a grid/DOM boundary,
- * unlike two independently-bordered cells that merely try to look alike. */
 const multiCellPieces = computed(() => {
   return multiCellPlacements.value.map((piece) => {
     const sprites = CONNECTABLE_FURNITURE_SPRITES[piece.type]
-    // multiCellFurniturePlacements only ever produces 'h2'/'v2'/'h3'/'v3'/'L' (it
-    // filters out 1-cell pieces), so 'single' never reaches here — the cast just tells
-    // TS that.
     const src =
       piece.shape === 'L'
         ? (sprites?.L?.[piece.missingCorner!] ?? FURNITURE_SPRITES[piece.type])
@@ -87,11 +66,8 @@ const multiCellCellKeys = computed(() => {
   return keys
 })
 
-/** Every currently-placed suspect, as its own single-cell grid overlay drawn after (so:
- * visually on top of) both the cell backgrounds and the multi-cell furniture overlays
- * above — see `multiCellPieces`. Kept out of the per-cell `<div>` below so a face is
- * never stacked *underneath* a spanning piece image just because that image comes
- * later in the piece list. */
+/** Placed suspects as their own grid overlays, drawn on top of the cell and furniture
+ * layers so a face is never hidden by a spanning piece. */
 const placedSuspects = computed(() => {
   return Object.entries(store.placements)
     .filter((e): e is [string, Position] => e[1] !== null)
@@ -110,12 +86,6 @@ function cellStyle(row: number, col: number) {
   const bottom = neighbor(row + 1, col)
 
   return {
-    // Explicit placement, not left to auto-flow: the multi-cell piece overlays below
-    // use explicit gridColumn/gridRow too, and CSS Grid reserves explicitly-placed
-    // items' cells *before* auto-flowing the rest — without this, that reservation
-    // pushes some cell divs into an extra implicit row, breaking the 1:1 match between
-    // a cell div and its visual position (and silently eating clicks on the shifted
-    // cells, since onCellClick still fires with the div's own, now-wrong, row/col).
     gridColumn: gridLine(col),
     gridRow: gridLine(row),
     borderTop: !top || top.roomId !== cell.roomId ? thick : thin,

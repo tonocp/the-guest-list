@@ -1,45 +1,41 @@
 # Mapa para agentes
 
-Contexto denso para cargar rápido antes de tocar este repo. Los demás documentos en
-`docs/` profundizan cada sección.
+Contexto denso para cargar antes de tocar el repo. El resto de `docs/` profundiza.
 
 ## Qué es esto
 
-Vue 3 + TypeScript + Vite + Pinia. Juego de lógica "misterio de asesinato + sudoku":
-colocar sospechosos en una cuadrícula (una fila, una columna cada uno) siguiendo
-pistas de texto, hasta deducir quién compartía sala con la víctima. PWA instalable y
-offline. Sin backend — todo el estado vive en el cliente (IndexedDB para las
-partidas guardadas, ver [`persistence.md`](./persistence.md)).
+Vue 3 + TS + Vite + Pinia. Juego de lógica "misterio de asesinato + sudoku": colocar
+sospechosos en una cuadrícula (una fila, una columna cada uno) siguiendo pistas de
+texto, hasta deducir quién compartía sala con la víctima. PWA instalable y offline,
+sin backend — todo el estado en el cliente (IndexedDB, ver [`persistence.md`](./persistence.md)).
 
-## Invariantes que hay que conocer antes de tocar la lógica del juego
+## Invariantes de la lógica del juego
 
-1. **Solo hay una restricción dura de colocación**: una persona por fila, una por
-   columna (matriz de permutación). Las salas **no son exclusivas** — varios
-   sospechosos pueden compartirla.
-2. **Dos sospechosos nunca pueden estar ortogonalmente adyacentes** — es una
-   consecuencia matemática de (1), no una regla aparte. Por tanto `adjacent` entre dos
-   sospechosos solo se puede satisfacer compartiendo sala.
-3. **La sala de la víctima debe tener exactamente 2 ocupantes** en la solución (víctima
-   + asesino), o `getMurderer()` en `gridLogic.ts` devuelve un resultado mal definido.
-4. **`Suspect.clue` es un único string** — cada sospechoso muestra como mucho una
-   pista.
-5. Detalle completo: [`game-rules.md`](./game-rules.md).
+1. **Única restricción dura de colocación**: una persona por fila y por columna (matriz
+   de permutación). Las salas **no son exclusivas**.
+2. **Dos sospechosos nunca están ortogonalmente adyacentes** — consecuencia de (1), no
+   regla aparte. `adjacent` entre sospechosos solo se satisface compartiendo sala.
+3. **La sala de la víctima tiene exactamente 2 ocupantes** en la solución, o
+   `getMurderer()` queda mal definido.
+4. **`Suspect.clue` es un único string** — un sospechoso muestra como mucho una pista.
+
+Detalle: [`game-rules.md`](./game-rules.md).
 
 ## Mapa de archivos
 
 ```
 src/types/puzzle.ts          contrato de datos único (Puzzle, Suspect, Room, Cell, ClueRule)
-src/lib/gridLogic.ts         reglas puras: isNextTo, isBesideFurniture, getConflicts, getMurderer...
+src/lib/gridLogic.ts         reglas puras: isNextTo, isBesideFurniture, getConflicts, getMurderer, furniturePieces...
 src/lib/solver.ts            backtracking + MRV + poda; countSolutions/hasUniqueSolution
-src/lib/rng.ts               PRNG determinista (mulberry32) — usar SIEMPRE esto en el generador, nunca Math.random()
-src/lib/generator/           generador procedural completo (ver procedural-generator.md)
+src/lib/rng.ts               PRNG determinista (mulberry32) — SIEMPRE esto en el generador, nunca Math.random()
+src/lib/generator/           generador procedural (ver procedural-generator.md)
 src/lib/persistence/         puerto GameRepository + adapter IndexedDB (ver persistence.md)
-src/data/resolvePuzzle.ts    reconstruye el Puzzle jugable regenerándolo desde el seed+difficulty del SavedGame
-src/stores/puzzleStore.ts    estado de partida (Pinia), load(id) async + autoguardado, delega reglas a gridLogic.ts
-src/views/, src/components/  UI — no reimplementan reglas, solo leen del store
-scripts/verify-puzzle.ts     solver vs generador en semillas fijas: solución única y coincidente (usa solver.ts)
-scripts/stress-generate.ts   generador: tasa de éxito + tiempos, por semilla × dificultad
-scripts/gen-sprites.mjs      genera TODOS los sprites pixel-art por código (sharp)
+src/data/resolvePuzzle.ts    regenera el Puzzle jugable desde seed+difficulty del SavedGame
+src/stores/puzzleStore.ts    estado de partida (Pinia), load(id) async + autoguardado, delega en gridLogic.ts
+src/views/, src/components/  UI — leen del store, no reimplementan reglas
+scripts/verify-puzzle.ts     solver vs generador en semillas fijas: solución única y coincidente
+scripts/stress-generate.ts   generador: tasa de éxito + tiempos por semilla × dificultad
+scripts/gen-sprites.mjs      genera todos los sprites pixel-art por código (sharp)
 ```
 
 Dirección de dependencia estricta: `types/` ← `lib/` ← `data/` ← `stores/` ←
@@ -47,59 +43,52 @@ Dirección de dependencia estricta: `types/` ← `lib/` ← `data/` ← `stores/
 
 ## Trampas conocidas
 
-- **El solver puede explotar exponencialmente sin anclaje unario**: una cadena larga
-  de reglas `direction` sin ningún `room`/`on-furniture` puede tardar mucho incluso
-  con MRV. Por eso `solver.ts` tiene un tope `maxNodes` y `selectClues.ts` **nunca**
-  selecciona reglas binarias. No quitar ninguna de las dos cosas sin releer
-  [`procedural-generator.md`](./procedural-generator.md).
-- **Nunca pases estado de Pinia directamente a `gameRepository.save(...)`** —
-  IndexedDB no puede clonar un `Proxy` reactivo de Vue. Ya está resuelto dentro de
-  `indexedDbGameRepository.ts` (aplana con `JSON.parse(JSON.stringify(...))` antes de
-  `store.put`).
-- **El Service Worker de desarrollo puede servir código cacheado y viejo** aunque el
-  archivo fuente ya esté arreglado. Si un fix no parece surtir efecto, desregistra el
-  Service Worker y limpia sus cachés en la consola
-  (`(await navigator.serviceWorker.getRegistrations()).forEach(r => r.unregister())`
-  + `caches.keys().then(ks => ks.forEach(k => caches.delete(k)))`) antes de seguir
-  depurando.
-- **El mobiliario ya NO garantiza 1 celda por tipo**: `rug`/`bed`/`piano` pueden ocupar
-  2 celdas, `sofa` hasta 3 (L), y `screen` hasta 3 (línea recta) — ver
-  `generator/furniture.ts` (`growRug`/`growSofa`/`growScreen`). Quien toque
-  `BoardGrid.vue` o cualquier lógica que lea `cell.furniture` no debe asumir
-  cardinalidad 1 — usar `cells.filter(c => c.furniture === type)` como ya hace
-  `solver.ts`/`clueFacts.ts`, nunca "el" `Cell` de ese tipo.
-- **`bed`/`piano` nunca degradan a 1 celda** (a diferencia de `rug`/`sofa`/`screen`, que
-  sí): cada uno se asigna aparte en `assignMustGrow` (`generator/furniture.ts`, llamado
-  una vez por tipo en `MUST_GROW_TYPES`), antes que el resto del mobiliario, y si ningún
-  sospechoso candidato tiene hueco para 2 celdas, se descarta del todo para ese caso en
-  vez de aparecer en 1 celda — una cama o un piano de 1 celda no se leen como tales. Los
-  sprites `bed-solo.png`/`piano-solo.png` (y sus entradas en `FURNITURE_SPRITES`) se
-  mantienen igualmente por completitud de tipos (todo `FurnitureType` necesita una
-  entrada), pero el generador procedural nunca los produce.
-  **Trampa ya sufrida al generalizar esto a un segundo tipo**: la primera versión de
-  `assignMustGrow` reasignaba el `type` entre sospechosos ya emparejados (en vez de
-  sacar al que de verdad creció del pool para siempre) — si el mismo sospechoso era el
-  único con hueco para *ambos* `bed` y `piano`, el segundo tipo procesado se quedaba con
-  la etiqueta en un sospechoso sin relación, que producía una segunda pieza de ese tipo
-  en otra sala. Ver el test de regresión en `furniture.test.ts` y la explicación
-  completa en `docs/visual-design.md`.
+- **El solver explota exponencialmente sin anclaje unario**: una cadena de reglas
+  `direction` sin ningún `room`/`on-furniture` tarda muchísimo incluso con MRV. Por eso
+  `solver.ts` tiene tope `maxNodes` y `selectClues.ts` **nunca** selecciona reglas
+  binarias. No quites ninguna de las dos sin releer
+  [`procedural-generator.md`](./procedural-generator.md). El forward-checking de
+  `liveCandidates` también es carga estructural: sin él, una cadena `direction` de
+  12×12 pasa de milisegundos a colgarse.
+- **Nunca pases estado de Pinia a `gameRepository.save(...)`**: IndexedDB no clona un
+  `Proxy` de Vue. Resuelto en `indexedDbGameRepository.ts` (aplana con
+  `JSON.parse(JSON.stringify(...))`).
+- **El Service Worker de desarrollo sirve código cacheado y viejo**. Si un fix no surte
+  efecto: desregistra el SW y limpia sus cachés en consola
+  (`(await navigator.serviceWorker.getRegistrations()).forEach(r => r.unregister())` +
+  `caches.keys().then(ks => ks.forEach(k => caches.delete(k)))`).
+- **El mobiliario NO garantiza 1 celda por tipo**: `rug`/`bed`/`piano` hasta 2, `sofa`
+  hasta 3 (L), `screen` hasta 3 (recto). Nunca asumas cardinalidad 1 al leer
+  `cell.furniture` — usa `cells.filter(c => c.furniture === type)`.
+- **`bed`/`piano` nunca degradan a 1 celda** (a diferencia de `rug`/`sofa`/`screen`):
+  se asignan aparte en `assignMustGrow` (una vez por tipo en `MUST_GROW_TYPES`), y si
+  ningún sospechoso tiene hueco para 2 celdas el tipo se descarta del caso — una cama o
+  un piano de 1 celda no se leen como tales. `bed-solo.png`/`piano-solo.png` existen
+  solo por completitud de `FurnitureType`.
+  **Regresión ya sufrida**: la primera `assignMustGrow` reasignaba el `type` entre
+  sospechosos ya emparejados en vez de sacar del pool al que creció. Si el mismo
+  sospechoso era el único con hueco para *ambos* tipos, el segundo se quedaba pegado a
+  un sospechoso sin relación → segunda pieza de ese tipo en otra sala. El fix saca al
+  grower del pool para siempre. Test de regresión en `furniture.test.ts`
+  ("never produces two placements of the same type").
+- **`near-furniture` es alcanzable pero nunca seleccionado**: todo sospechoso tiene un
+  hecho `room` (fuerza 3) que supera a `near-furniture` (2). Los casos generados solo
+  muestran `room` y `on-furniture`. El tipo sigue plumbed end-to-end para la variedad
+  narrativa futura.
 
-## Cómo verificar que algo sigue funcionando
+## Verificación
 
 ```bash
-npx vitest run                        # deben pasar todos
+npx vitest run                        # todos deben pasar
 npx tsx scripts/verify-puzzle.ts      # semillas fijas del generador, todas UNIQUE ✔
-npx tsx scripts/stress-generate.ts    # generador, tasa de éxito alta y rápido incluso en experto
-npm run build                         # vue-tsc -b && vite build, debe compilar sin errores de tipos
+npx tsx scripts/stress-generate.ts    # generador: tasa de éxito alta, rápido incluso en experto
+npm run build                         # vue-tsc -b && vite build, sin errores de tipos
 ```
 
-## Qué NO hacer sin preguntar primero
+## Qué NO hacer sin preguntar
 
-- No aplicar Hexagonal/DDD/Atomic Design formales a toda la app — ver
-  [`AGENTS.md`](../AGENTS.md).
-- No hacer `git commit` de nada.
-- No añadir dependencias de fuentes/CDN externas — rompe el requisito de PWA offline.
-- No dar por hecho que "más tests pasando" = "el generador funciona bien" sin también
-  correr `stress-generate.ts` — los tests solo cubren unas pocas semillas fijas.
-- No dejar `docs/` desactualizado tras un cambio de funcionalidad — ver
-  [`AGENTS.md`](../AGENTS.md).
+- Aplicar Hexagonal/DDD/Atomic Design formales — ver [`AGENTS.md`](../AGENTS.md).
+- `git commit` de nada.
+- Añadir dependencias de fuentes/CDN externas (rompe el offline).
+- Asumir que "más tests pasando" = "el generador va bien" sin correr `stress-generate.ts`.
+- Dejar `docs/` desactualizado tras un cambio de funcionalidad.

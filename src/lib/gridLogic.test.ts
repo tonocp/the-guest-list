@@ -36,10 +36,10 @@ describe('furniturePieces', () => {
   })
 
   it.each([
-    [{ '1-1': 'sofa', '1-2': 'sofa', '2-1': 'sofa' }, 'bottomRight'], // missing (2,2)
-    [{ '1-1': 'sofa', '1-2': 'sofa', '2-2': 'sofa' }, 'bottomLeft'], // missing (2,1)
-    [{ '1-1': 'sofa', '2-1': 'sofa', '2-2': 'sofa' }, 'topRight'], // missing (1,2)
-    [{ '1-2': 'sofa', '2-1': 'sofa', '2-2': 'sofa' }, 'topLeft'], // missing (1,1)
+    [{ '1-1': 'sofa', '1-2': 'sofa', '2-1': 'sofa' }, 'bottomRight'],
+    [{ '1-1': 'sofa', '1-2': 'sofa', '2-2': 'sofa' }, 'bottomLeft'],
+    [{ '1-1': 'sofa', '2-1': 'sofa', '2-2': 'sofa' }, 'topRight'],
+    [{ '1-2': 'sofa', '2-1': 'sofa', '2-2': 'sofa' }, 'topLeft'],
   ])('finds the missing corner of a 3-cell L piece', (furnitureByKey, missingCorner) => {
     const piece = furniturePieces(gridOf(furnitureByKey as Record<string, FurnitureType>))[0]
     expect(piece.missingCorner).toBe(missingCorner)
@@ -55,7 +55,6 @@ describe('furniturePieces', () => {
 })
 
 describe('isBesideFurniture', () => {
-  // cols 0-1 are room A, cols 2-3 are room B. Furniture sits at (1,1).
   const cellAt = (row: number, col: number): Cell => ({ row, col, roomId: col <= 1 ? 'A' : 'B' })
   const furniture = cellAt(1, 1)
 
@@ -137,17 +136,8 @@ describe('multiCellFurniturePlacements', () => {
     expect(vertical).toMatchObject({ shape: 'v3', gridColumn: '2 / 3', gridRow: '2 / 5' })
   })
 
-  /**
-   * Regression test: an earlier version hid a multi-cell piece entirely whenever a
-   * suspect was on any of its cells, so a 2-3 cell rug/sofa vanished completely just
-   * because the player was trying a guess on one cell of it — much worse than a
-   * single-cell icon being partly covered by a face. The fix is architectural, not a
-   * conditional that could regress on its own: this function's signature has no
-   * `Placements` parameter at all, so its output cannot depend on suspect occupancy —
-   * every cell of every multi-cell piece is always present. See
-   * docs/visual-design.md for the longer story and BoardGrid.vue for how the
-   * placed-suspect layer is drawn *on top of* these overlays instead of replacing them.
-   */
+  /** Regression: the output must not depend on suspect occupancy (no `Placements`
+   * param) so a piece is never hidden by a suspect on it. See docs/visual-design.md. */
   it('always includes every cell of a multi-cell piece, with no way to hide any of them', () => {
     const twoCell = multiCellFurniturePlacements(gridOf({ '1-1': 'rug', '1-2': 'rug' }))[0]
     expect(twoCell.cells).toHaveLength(2)

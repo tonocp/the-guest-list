@@ -3,8 +3,6 @@ export interface SuspectSeed {
   gender: 'f' | 'm'
 }
 
-/** Enough distinct identities to cover an "experto" (12x12) puzzle without repeats,
- * and to make regenerating the same difficulty not feel identical run to run. */
 export const SUSPECT_POOL: SuspectSeed[] = [
   { name: 'Nora', gender: 'f' },
   { name: 'Delia', gender: 'f' },

@@ -1,12 +1,7 @@
 import type { FurnitureType } from '../types/puzzle'
 
-/** Icon for a single-cell furniture piece — used for every type that never grows past
- * 1 cell, and for `rug`/`sofa`/`screen` on the rare occasion their footprint didn't grow
- * (see `generator/furniture.ts` `growRug`/`growSofa`/`growScreen` fallbacks). `bed`/
- * `piano` never actually reach this in practice — `assignMustGrow` drops them instead
- * of placing them at 1 cell — but the entry still has to exist for `Record<FurnitureType,
- * string>` completeness, and as a safety net for a possible future hand-authored
- * puzzle. See `CONNECTABLE_FURNITURE_SPRITES` for the multi-cell pieces. */
+/** Single-cell icon per type. `bed`/`piano` entries exist only for `Record`
+ * completeness — the generator never places them at 1 cell. */
 export const FURNITURE_SPRITES: Record<FurnitureType, string> = {
   plant: '/sprites/plant.png',
   rug: '/sprites/rug-solo.png',
@@ -23,17 +18,8 @@ export const FURNITURE_SPRITES: Record<FurnitureType, string> = {
   screen: '/sprites/screen-solo.png',
 }
 
-/** `rug`/`bed`/`piano` (straight, up to 2 cells), `sofa` (straight or L-shaped, up to 3
- * cells), and `screen` (straight, up to 3 cells) are the only types that ever span more
- * than 1 cell — see `generator/furniture.ts`. Each shape is one single pre-assembled
- * bitmap (no seam to keep aligned across cells, and — for the L — no rotation applied
- * at render time, so its backrest can be a genuinely asymmetric design instead of one
- * that has to survive being rotated; see `scripts/gen-sprites.mjs` `sofaLVariants` and
- * docs/visual-design.md). `BoardGrid.vue` picks the shape from `pieceShape()` in
- * `gridLogic.ts`, and for `L` also needs `missingCorner` to pick which of the 4 baked
- * orientations to use. `screen` is the only type that reaches 3 cells in a straight
- * line (`h3`/`v3`) instead of an L — a folding screen doesn't have a "corner"
- * orientation the way a sectional sofa does. */
+/** Pre-assembled multi-cell bitmaps by shape. `BoardGrid.vue` picks the shape from
+ * `pieceShape()`, plus `missingCorner` for the L. See docs/visual-design.md. */
 export const CONNECTABLE_FURNITURE_SPRITES: Partial<
   Record<
     FurnitureType,

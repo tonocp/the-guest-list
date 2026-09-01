@@ -3,15 +3,8 @@ import { hasUniqueSolution } from '../solver'
 import { type RNG, pick, shuffle } from '../rng'
 import type { CandidateFact } from './clueFacts'
 
-/**
- * Higher is stronger. `direction`/`adjacent` are deliberately excluded (strength -1,
- * never selected): every suspect always has a `room` fact available, which outranks
- * them here, so under a strict "give each suspect their single strongest fact" rule
- * they'd never get picked anyway. This is also what keeps the generator away from the
- * pathological unanchored-`direction`-chain case the solver's node budget exists for —
- * see the generator/solver design notes. Room-only variety (direction/adjacent clues
- * in generated puzzles) is a follow-up, not a v1 requirement.
- */
+/** Higher is stronger. `direction`/`adjacent` are excluded (−1, never selected) — see
+ * procedural-generator.md. */
 function strength(fact: CandidateFact): number {
   switch (fact.rule.type) {
     case 'on-furniture':
@@ -25,13 +18,9 @@ function strength(fact: CandidateFact): number {
   }
 }
 
-/**
- * Gives every suspect their single strongest available fact (at most one each, since
- * `Suspect.clue` is one string), confirms the *maximal* set is unique, then minimizes
- * by dropping anything redundant. Returns null if even the maximal set isn't unique —
- * the caller should retry with a fresh solution/rooms/furniture draw rather than fight
- * this specific combination further.
- */
+/** Gives every suspect their strongest available fact, confirms the set is unique, then
+ * minimizes it. Returns null if the maximal set isn't unique — the caller should retry
+ * with a fresh draw. */
 export function selectClues(
   size: number,
   suspectIds: string[],

@@ -1,23 +1,14 @@
 import type { Cell, ClueRule, FurnitureType, Position } from '../../types/puzzle'
 import { isBesideFurniture } from '../gridLogic'
 
-/** A true fact about the solution, tagged with which suspect's card it would appear
- * on (the rule's `suspect` / `subject` / `a`, depending on type). */
 export interface CandidateFact {
   owner: string
   rule: ClueRule
 }
 
-/**
- * Enumerates every true fact derivable from a fixed (solution, rooms, furniture) for
- * each non-victim suspect. The true solution trivially satisfies any subset of these,
- * so generation never needs to check "does this match the intended solution" the way
- * hand-authoring does — only whether the *chosen subset* pins it uniquely.
- *
- * `adjacent` facts involving the victim are deliberately never generated: since the
- * murderer is defined as whoever shares the victim's room, an "X was next to the
- * victim" clue would hand the player the answer directly.
- */
+/** Every true fact derivable from a fixed (solution, rooms, furniture), per non-victim
+ * suspect. `adjacent` facts involving the victim are skipped — they'd hand the player
+ * the murderer directly. */
 export function enumerateFacts(
   cells: Cell[],
   solution: Record<string, Position>,

@@ -86,8 +86,6 @@ function tryGenerateOnce(size: number, rng: RNG): Attempt | null {
   const rules = selectClues(size, suspectIds, cells, facts, rng)
   if (!rules) return null
 
-  // Belt-and-suspenders: one more solver call on the fully assembled puzzle before
-  // trusting it, in case anything upstream slipped an inconsistency through.
   if (!hasUniqueSolution({ size, suspectIds, cells, rules })) return null
 
   const nameById = new Map(suspectIds.map((id, i) => [id, roster[i].name]))
@@ -110,12 +108,9 @@ function tryGenerateOnce(size: number, rng: RNG): Attempt | null {
   return { title: `Caso en ${theme.label}`, rooms, cells, suspects, solution, rules }
 }
 
-/** Generates a fresh, randomly themed, provably-unique-solution puzzle for the given
- * difficulty. Retries the whole pipeline (fresh rooms, solution, furniture, clues) up
- * to `maxAttempts` times — each step inside one attempt is individually probabilistic
- * (room growth can dead-end, a solution might not yield a valid victim room, clue
- * selection might not reach uniqueness within the one-clue-per-suspect cap), so an
- * occasional retry is expected, not a bug. */
+/** A fresh, randomly themed, provably-unique puzzle for the difficulty. Retries the
+ * whole pipeline up to `maxAttempts` times — each step is probabilistic, so an
+ * occasional retry is expected. */
 export function generatePuzzle(options: GeneratePuzzleOptions): Puzzle {
   const size = SIZE_BY_DIFFICULTY[options.difficulty]
   const masterRng = createRng(options.seed ?? Date.now())

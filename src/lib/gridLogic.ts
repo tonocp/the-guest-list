@@ -4,8 +4,6 @@ export function cellKey(row: number, col: number): string {
   return `${row}-${col}`
 }
 
-/** A CSS `grid-column`/`grid-row` value (1-indexed lines) for a single 0-indexed
- * row/col, or spanning from `start` to `end` inclusive. */
 export function gridLine(start: number, end: number = start): string {
   return `${start + 1} / ${end + 2}`
 }
@@ -14,7 +12,7 @@ export function getCell(puzzle: Pick<Puzzle, 'cells'>, row: number, col: number)
   return puzzle.cells.find((c) => c.row === row && c.col === col)
 }
 
-/** Two positions are "junto a" (next to) each other: orthogonally adjacent, or sharing a room. */
+/** "Junto a": orthogonally adjacent, or sharing a room. */
 export function isNextTo(puzzle: Pick<Puzzle, 'cells'>, a: Position, b: Position): boolean {
   const orthogonal =
     (a.row === b.row && Math.abs(a.col - b.col) === 1) ||
@@ -26,12 +24,8 @@ export function isNextTo(puzzle: Pick<Puzzle, 'cells'>, a: Position, b: Position
   return !!cellA && !!cellB && cellA.roomId === cellB.roomId
 }
 
-/**
- * "Pegado a" un mueble (the `near-furniture` clue): the suspect's cell is the
- * furniture's cell or orthogonally touching it, **and** in the same room as it. Unlike
- * people's "junto a", furniture proximity never reaches across a room boundary — a cell
- * orthogonally next to a piece but in the neighbouring room does not count.
- */
+/** "Pegado a" un mueble: same room and at most one orthogonal step away (the cell
+ * itself counts). Never reaches across a room boundary, unlike people's "junto a". */
 export function isBesideFurniture(suspectCell: Cell, furnitureCell: Cell): boolean {
   return (
     suspectCell.roomId === furnitureCell.roomId &&
@@ -46,10 +40,8 @@ export interface Conflict {
   reason: 'row' | 'col'
 }
 
-/**
- * Live feedback: which placed suspects currently break the one-per-row/one-per-col rule.
- * Rooms are NOT exclusive — several suspects may share a room, so sharing one is never a conflict.
- */
+/** Placed suspects that currently break the one-per-row/one-per-col rule (rooms are
+ * never a conflict). */
 export function getConflicts(_puzzle: Puzzle, placements: Placements): Conflict[] {
   const conflicts: Conflict[] = []
   const entries = Object.entries(placements).filter(
@@ -86,19 +78,13 @@ export interface FurniturePiece {
   maxRow: number
   minCol: number
   maxCol: number
-  /** Only set for an L-shaped 3-cell piece (the sofa — see `generator/furniture.ts`
-   * `growSofa`), whose footprint spans a 2x2 bounding box with one corner empty. A
-   * straight 3-cell piece (the screen — see `growScreen`) is 3 cells in a single row/
-   * column instead, so it never gets a `missingCorner`. */
+  /** Set only for an L-shaped 3-cell piece (the sofa): a 2x2 bounding box with one
+   * corner empty. */
   missingCorner?: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
 }
 
-/** Groups the puzzle's furnished cells into pieces by type — each `FurnitureType`
- * appears at most once per puzzle (see `generator/furniture.ts`), so cells sharing a
- * type are guaranteed to be the same piece, with no extra footprint metadata needed on
- * `Cell`/`Puzzle`. A single-cell type (or a rug/sofa that only grew to 1 cell) comes
- * back as a 1-cell piece — BoardGrid.vue renders those with the plain per-cell icon and
- * only builds a spanning overlay for pieces with more than 1 cell. */
+/** Groups furnished cells into pieces by type. Each `FurnitureType` appears at most
+ * once per puzzle, so cells of one type are the same piece. */
 export function furniturePieces(puzzle: Pick<Puzzle, 'cells'>): FurniturePiece[] {
   const byType = new Map<FurnitureType, Position[]>()
   for (const cell of puzzle.cells) {
@@ -115,9 +101,6 @@ export function furniturePieces(puzzle: Pick<Puzzle, 'cells'>): FurniturePiece[]
     const minCol = Math.min(...cells.map((c) => c.col))
     const maxCol = Math.max(...cells.map((c) => c.col))
 
-    // Only a genuine L (2x2 bounding box, one corner empty) gets a missingCorner — a
-    // straight 3-cell piece (the screen) has minRow===maxRow or minCol===maxCol, so
-    // there's no 2x2 box to find a missing corner of.
     let missingCorner: FurniturePiece['missingCorner']
     if (cells.length === 3 && minRow !== maxRow && minCol !== maxCol) {
       const has = (row: number, col: number) => cells.some((c) => c.row === row && c.col === col)
@@ -134,13 +117,8 @@ export function furniturePieces(puzzle: Pick<Puzzle, 'cells'>): FurniturePiece[]
 
 export type PieceShape = 'single' | 'h2' | 'v2' | 'h3' | 'v3' | 'L'
 
-/** Which sprite shape renders a piece from `furniturePieces()`. Every shape (including
- * each of the 4 possible L orientations) has its own dedicated pre-baked sprite file —
- * see `furnitureIcons.ts` — so there's no rotation left to compute here; picking the
- * right file for an 'L' piece just needs `piece.missingCorner` directly. A 3-cell piece
- * is 'L' only if it's genuinely L-shaped (spans both rows and cols — the sofa); a
- * straight 3-in-a-row/column piece (the screen) is 'h3'/'v3' instead, same convention
- * as 'h2'/'v2'. */
+/** Which pre-baked sprite shape renders a piece. 'L' is a genuine L (spans both rows
+ * and cols); a straight 3-cell run is 'h3'/'v3'. */
 export function pieceShape(piece: FurniturePiece): PieceShape {
   if (piece.cells.length === 1) return 'single'
   const horizontal = piece.minRow === piece.maxRow
@@ -154,21 +132,13 @@ export interface MultiCellFurniturePlacement {
   cells: Position[]
   shape: PieceShape
   missingCorner?: FurniturePiece['missingCorner']
-  /** CSS grid-column/grid-row values (1-indexed lines) spanning the piece's bounding
-   * box, for `BoardGrid.vue` to place one overlay image across all of its cells. */
   gridColumn: string
   gridRow: string
 }
 
-/** Grid placement for every furniture piece spanning more than 1 cell (a 1-cell piece
- * renders as a normal per-cell icon instead — see `furniturePieces()`). Deliberately
- * takes only `puzzle`, not `Placements`: a multi-cell piece must always render in full,
- * regardless of whether a suspect is currently standing on one of its cells. An earlier
- * version hid the whole piece whenever any of its cells was occupied, which made a
- * 2-3 cell rug/sofa vanish entirely just because the player was trying a guess on one
- * of its cells — see `gridLogic.test.ts` for the regression test and
- * docs/visual-design.md for the longer story. `BoardGrid.vue` draws the placed-suspect
- * layer on top of these overlays, so a suspect face is never hidden by one either. */
+/** Grid placement for every furniture piece spanning more than 1 cell (1-cell pieces
+ * render as a normal per-cell icon). Deliberately takes no `Placements`: a piece must
+ * always render in full, never hidden by a suspect standing on one of its cells. */
 export function multiCellFurniturePlacements(puzzle: Pick<Puzzle, 'cells'>): MultiCellFurniturePlacement[] {
   return furniturePieces(puzzle)
     .filter((piece) => piece.cells.length > 1)
@@ -182,7 +152,6 @@ export function multiCellFurniturePlacements(puzzle: Pick<Puzzle, 'cells'>): Mul
     }))
 }
 
-/** The suspect adjacent to the victim in the true solution is the murderer. */
 export function getMurderer(puzzle: Puzzle): string | undefined {
   const victim = puzzle.suspects.find((s) => s.isVictim)
   if (!victim) return undefined

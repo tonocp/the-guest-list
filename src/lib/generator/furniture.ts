@@ -21,16 +21,16 @@ const FURNITURE_TYPES: FurnitureType[] = [
 export interface FurniturePlacement {
   suspectId: string
   type: FurnitureType
-  /** Anchor cell first (always the suspect's own solution cell), then any extra footprint cells. */
+  /** Anchor cell first (the suspect's own solution cell), then any footprint cells. */
   cells: Position[]
 }
 
 interface GrowthCtx {
   roomIdAt: (p: Position) => string
   inBounds: (p: Position) => boolean
-  /** Every suspect's own solution cell (victim included) — a footprint may never claim one of these. */
+  /** Every suspect's own solution cell — a footprint may never claim one of these. */
   protectedCells: Set<string>
-  /** Cells already claimed by an earlier piece in this same generation attempt. */
+  /** Cells claimed by an earlier piece in this same attempt. */
   usedCells: Set<string>
 }
 
@@ -48,8 +48,7 @@ const RUG_DIRECTIONS: Position[] = [
   { row: 0, col: 1 },
 ]
 
-/** Straight 2-cell footprint (horizontal or vertical); falls back to the anchor alone
- * if no neighboring cell is free within the same room. */
+/** Straight 2-cell footprint; falls back to the anchor alone. */
 export function growRug(anchor: Position, ctx: GrowthCtx, rng: RNG): Position[] {
   for (const dir of shuffle(rng, RUG_DIRECTIONS)) {
     const extra = { row: anchor.row + dir.row, col: anchor.col + dir.col }
@@ -58,7 +57,6 @@ export function growRug(anchor: Position, ctx: GrowthCtx, rng: RNG): Position[] 
   return [anchor]
 }
 
-/** The 4 rotations of a corner (L-tromino), right angle at the anchor. */
 const SOFA_L_TEMPLATES: Position[][] = [
   [{ row: 0, col: 1 }, { row: 1, col: 0 }],
   [{ row: 0, col: -1 }, { row: 1, col: 0 }],
@@ -66,8 +64,7 @@ const SOFA_L_TEMPLATES: Position[][] = [
   [{ row: 0, col: -1 }, { row: -1, col: 0 }],
 ]
 
-/** L-shaped 3-cell footprint; falls back to a straight 2-cell rug shape, then to the
- * anchor alone, if no corner orientation fits within the room. */
+/** L-shaped 3-cell footprint; falls back to a rug shape, then the anchor alone. */
 export function growSofa(anchor: Position, ctx: GrowthCtx, rng: RNG): Position[] {
   for (const [d1, d2] of shuffle(rng, SOFA_L_TEMPLATES)) {
     const arm1 = { row: anchor.row + d1.row, col: anchor.col + d1.col }
@@ -77,12 +74,7 @@ export function growSofa(anchor: Position, ctx: GrowthCtx, rng: RNG): Position[]
   return growRug(anchor, ctx, rng)
 }
 
-/** Straight 3-cell footprint (the folding screen's 3 panels in a row) — same 4
- * directions as `growRug`, just extended one more cell in the same direction; falls
- * back to a straight 2-cell run, then the anchor alone, if a full 3-run doesn't fit.
- * Unlike `bed`/`piano` (see `MUST_GROW_TYPES`), a screen degrades gracefully: even a
- * single panel is a real, recognizable object (a lone room-divider panel), not a
- * contradiction the way a 1-cell bed or piano is. */
+/** Straight 3-cell footprint; falls back to a 2-cell run, then the anchor alone. */
 export function growScreen(anchor: Position, ctx: GrowthCtx, rng: RNG): Position[] {
   for (const dir of shuffle(rng, RUG_DIRECTIONS)) {
     const mid = { row: anchor.row + dir.row, col: anchor.col + dir.col }
@@ -99,21 +91,11 @@ function growFootprint(type: FurnitureType, anchor: Position, ctx: GrowthCtx, rn
   return [anchor]
 }
 
-/** `bed` and `piano` must always end up 2 cells — a real bed or grand piano is long,
- * never square (see gen-sprites.mjs `bedMotif`/`pianoMotif`) — unlike `rug`/`sofa`/
- * `screen`, which tolerate falling back to fewer cells because a 1-cell rug, sofa
- * armchair, or single screen panel is still a real, recognizable object on its own.
- * Tries every remaining suspect in turn until one has room for a straight 2-cell
- * footprint; that suspect is placed immediately and removed from `remainingSuspects`
- * for good (never reconsidered by a later call for a different must-grow type — an
- * earlier version swapped types between assignments in place instead of removing the
- * grower outright, which let the same suspect's already-used-up growth get attributed
- * to *two* types when a second must-grow call reused them, producing two same-type
- * placements built from unrelated anchors; see the regression test). If nobody has
- * room, the type is simply not placed — it was already dropped from `remainingTypes`
- * by the caller before this runs, so that's the end of it, no 1-cell fallback. Mutates
- * `remainingSuspects` and `ctx.usedCells` in place; returns the placement if one was
- * made. */
+/** `bed`/`piano` must always end up 2 cells — a 1-cell bed or piano doesn't read as
+ * one. Tries each remaining suspect until one has room for a straight 2-cell footprint;
+ * that suspect is removed from the pool for good. If nobody has room the type is not
+ * placed (already dropped from `remainingTypes` by the caller). See for-agents.md for
+ * the regression this ordering fixed. */
 function assignMustGrow(
   type: FurnitureType,
   remainingSuspects: string[],
@@ -134,24 +116,10 @@ function assignMustGrow(
 
 export const MUST_GROW_TYPES: FurnitureType[] = ['bed', 'piano']
 
-/** Gives up to one unique furniture item per non-victim suspect, anchored at their own
- * solution cell. 13 types exist — enough to cover every non-victim suspect even at
- * "experto" (12x12, 11 non-victim suspects); the margin exists because a `room` fact
- * alone was measured to be unreliable at fully pinning the couple of suspects
- * furniture doesn't reach (see the generator design notes on why unary facts are
- * preferred over chains of `direction`/`adjacent`).
- *
- * `rug`/`sofa`/`screen` grow beyond their anchor into extra cells within the same room
- * (straight for rug/screen, L-shaped/corner for sofa) — every other type stays 1 cell.
- * `bed`/`piano` are the exception: see `assignMustGrow`, which runs first for each and
- * may drop it from this puzzle entirely rather than ever placing it at 1 cell.
- *
- * The two pools below (`remainingSuspects`/`remainingTypes`) can end up different
- * lengths — a dropped must-grow type removes a type but not a suspect — so the final
- * pairing loop uses whichever is shorter and leaves any leftover suspect with no
- * furniture at all. That's not a bug to route around: "up to one item per suspect" was
- * already the contract (see above), so a suspect ending up with none is an accepted
- * outcome, not a broken invariant. */
+/** Up to one unique furniture item per non-victim suspect, anchored at their own
+ * solution cell. `rug`/`sofa`/`screen` grow within the room; `bed`/`piano` grow via
+ * `assignMustGrow` or are dropped; the rest stay 1 cell. A suspect ending up with no
+ * furniture is an accepted outcome, not a broken invariant. */
 export function assignFurniture(
   nonVictimSuspectIds: string[],
   solution: Record<string, Position>,

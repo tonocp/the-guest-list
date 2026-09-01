@@ -4,8 +4,6 @@ import { cellKey } from '../gridLogic'
 import { createRng } from '../rng'
 import { assignFurniture, growRug, growScreen, growSofa } from './furniture'
 
-/** A 6x6 board, single room covering everything, no suspects nearby — plenty of room
- * for any footprint to grow. */
 function openCtx(protectedCells: Position[] = []) {
   return {
     roomIdAt: () => 'room-0',
@@ -54,14 +52,12 @@ describe('growSofa', () => {
       (p.row === q.row && Math.abs(p.col - q.col) === 1) || (p.col === q.col && Math.abs(p.row - q.row) === 1)
     expect(isAdjacent(a, arm1)).toBe(true)
     expect(isAdjacent(a, arm2)).toBe(true)
-    // a right angle, not a straight line through the anchor
     expect(arm1.row === arm2.row && arm1.col === arm2.col).toBe(false)
     expect(arm1.row + arm2.row === 2 * a.row && arm1.col + arm2.col === 2 * a.col).toBe(false)
   })
 
   it('falls back to a straight 2-cell footprint, then the anchor alone, when no corner fits', () => {
     const anchor = { row: 0, col: 0 }
-    // corner of a 6x6 board with a suspect on the only remaining free neighbor
     const cells = growSofa(anchor, openCtx([{ row: 0, col: 1 }]), createRng(1))
     expect(cells).toEqual([anchor, { row: 1, col: 0 }])
 
@@ -82,16 +78,12 @@ describe('growScreen', () => {
     expect(cells.length).toBe(3)
     expect(cells[0]).toEqual(anchor)
     const [a, mid, far] = cells
-    // all 3 collinear and evenly spaced along one axis
     expect(mid.row - a.row).toBe(far.row - mid.row)
     expect(mid.col - a.col).toBe(far.col - mid.col)
   })
 
   it('falls back to a straight 2-cell footprint, then the anchor alone, when a full 3-run doesn\'t fit', () => {
     const anchor = { row: 0, col: 0 }
-    // corner of a 6x6 board: only 1 free cell away from the anchor in every open
-    // direction (row 2/col 2 are both out of the room on this board), so no direction
-    // supports a 3-run, but a straight 2-cell run still fits
     const cells = growScreen(anchor, openCtx([{ row: 0, col: 2 }, { row: 2, col: 0 }]), createRng(1))
     expect(cells.length).toBe(2)
 
@@ -111,7 +103,6 @@ describe('assignFurniture', () => {
   )
 
   function solutionFor(ids: string[]): Record<string, Position> {
-    // one suspect per row/col, spread out so footprints have room to grow
     const solution: Record<string, Position> = {}
     ids.forEach((id, i) => {
       solution[id] = { row: i, col: i }
@@ -168,20 +159,7 @@ describe('assignFurniture', () => {
     }
   })
 
-  /**
-   * Regression test: an earlier version of the must-grow logic (bed/piano) swapped
-   * types between assignments in place instead of removing a successful grower from
-   * the pool for good. If the *same* suspect happened to be the only one with room to
-   * grow both `bed` and `piano`, that suspect's single grown footprint got attributed
-   * to whichever type was processed last, while the *other* type's label got left
-   * behind on some unrelated suspect — who then fell through to `growFootprint`'s
-   * default (`[anchor]`), producing a second, spurious 1-cell placement of the same
-   * type anchored somewhere else entirely (caught by `generatePuzzle.test.ts`'s
-   * same-room check, since the two placements were nowhere near each other). Sweeping
-   * many seeds here — the two-placements-of-one-type bug only manifests for certain
-   * random pairings — is a faster, more direct way to pin it down than only relying on
-   * that fuller integration test.
-   */
+  /** Regression: see for-agents.md "Trampas conocidas". */
   it('never produces two placements of the same type', () => {
     const ids = ['s0', 's1', 's2', 's3', 's4']
     const solution = solutionFor(ids)
@@ -207,7 +185,6 @@ describe('assignFurniture', () => {
     )
     const solution = { s0: { row: 0, col: 0 } }
 
-    // seed 0 happens to assign a non-growing type here, which always stays 1 cell
     expect(() => assignFurniture(ids, solution, tinyRoomGrid, size, createRng(0))).not.toThrow()
     const [placement] = assignFurniture(ids, solution, tinyRoomGrid, size, createRng(0))
     expect(placement.cells).toEqual([{ row: 0, col: 0 }])
@@ -223,10 +200,6 @@ describe('assignFurniture', () => {
     )
     const solution = { s0: { row: 0, col: 0 } }
 
-    // each seed happens to assign `type` to the only suspect, boxed into a 1-cell
-    // room — unlike rug/sofa/screen, bed/piano must never fall back to a 1-cell
-    // placement (see `assignMustGrow`), so this suspect should end up with no
-    // furniture at all.
     const placements = assignFurniture(ids, solution, tinyRoomGrid, size, createRng(seed))
     expect(placements).toEqual([])
   })

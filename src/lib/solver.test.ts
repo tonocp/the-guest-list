@@ -3,13 +3,6 @@ import type { Cell, ClueRule } from '../types/puzzle'
 import { countSolutions, hasUniqueSolution, type SolverInput } from './solver'
 
 describe('a full-size puzzle fixture (regression)', () => {
-  // 5x5, hand-verified unique — the end-to-end check that the solver handles a
-  // realistically shaped puzzle, not just the focused rule-type fixtures below.
-  // Room layout:  A A A B B
-  //               A A B B B
-  //               C C C D D
-  //               C C D D D
-  //               E E E E E
   const roomGrid = [
     ['A', 'A', 'A', 'B', 'B'],
     ['A', 'A', 'B', 'B', 'B'],
@@ -57,17 +50,12 @@ describe('a full-size puzzle fixture (regression)', () => {
   })
 
   it('reports zero solutions for a contradictory rule set', () => {
-    // The sofa clue already pins Nora to (0,0), room "A"; also forcing her into room
-    // "C" makes her domain empty.
     const contradictory: ClueRule[] = [...rules, { type: 'room', suspect: 'nora', roomId: 'C' }]
     expect(countSolutions(inputWith(contradictory), 2).count).toBe(0)
   })
 })
 
 describe('rule-type correctness on a small hand-verified 3x3 fixture', () => {
-  // Room layout:  A A B
-  //               A B B
-  //               C C C
   const roomGrid = [
     ['A', 'A', 'B'],
     ['A', 'B', 'B'],
@@ -81,9 +69,6 @@ describe('rule-type correctness on a small hand-verified 3x3 fixture', () => {
   }
 
   it('direction + adjacent + on-furniture combine to a unique solution', () => {
-    // X is pinned to (0,1) via a unique furniture item; the room layout makes X's
-    // room "A" only reachable from row 1 via column 0, and the two direction chains
-    // force the row order X < Y < Z — together this has exactly one solution.
     const cells = baseCells({ '0-1': 'plant' })
     const rules: ClueRule[] = [
       { type: 'on-furniture', suspect: 'x', furniture: 'plant' },
@@ -102,8 +87,6 @@ describe('rule-type correctness on a small hand-verified 3x3 fixture', () => {
   })
 
   it('adjacent is only ever satisfiable via a shared room, never orthogonal touch', () => {
-    // Z is always in room "C" (all of row 2); X (row 0) can only ever be room A/B.
-    // adjacent(x, z) can therefore never be satisfied, regardless of columns.
     const cells = baseCells()
     const rules: ClueRule[] = [
       { type: 'direction', subject: 'y', dir: 'S', reference: 'x' },
@@ -115,8 +98,6 @@ describe('rule-type correctness on a small hand-verified 3x3 fixture', () => {
   })
 
   it('near-furniture (positive) is consistent with an elimination-forced placement', () => {
-    // X and Z are pinned by unique furniture; Y is forced into the one remaining
-    // row/col by elimination — (1,1), orthogonally adjacent to the bed at (1,2).
     const cells = baseCells({ '0-0': 'sofa', '2-2': 'chair', '1-2': 'bed' })
     const rules: ClueRule[] = [
       { type: 'on-furniture', suspect: 'x', furniture: 'sofa' },
@@ -142,10 +123,6 @@ describe('rule-type correctness on a small hand-verified 3x3 fixture', () => {
 })
 
 describe('performance smoke test — 12x12, realistically shaped', () => {
-  // 8 suspects pinned to the diagonal by a unique furniture item each (mirrors the
-  // generator's plan: one furniture type per suspect, ≤8 types exist), the remaining
-  // 4 chained to each other via `direction` only — the part furniture can't reach.
-  // This is the shape the real generator produces, NOT an adversarial worst case.
   function realisticTwelve(): SolverInput {
     const size = 12
     const suspectIds = Array.from({ length: size }, (_, i) => `s${i}`)
@@ -189,12 +166,6 @@ describe('performance smoke test — 12x12, realistically shaped', () => {
 
 describe('node budget circuit breaker', () => {
   it('bails out instead of hanging on a pathological all-direction chain, and reports "not unique"', () => {
-    // Deliberately adversarial: a long `direction` chain with zero unary anchoring
-    // anywhere. Measured separately: this genuinely blows up combinatorially (confirmed
-    // exponential — exactly C(2N,N) backtracking nodes) even with MRV + forward
-    // checking, which is exactly why the node budget exists. Real generator output
-    // never looks like this (see the realistic case above) because clue selection is
-    // biased to anchor suspects with room/furniture facts before relative ones.
     const size = 12
     const suspectIds = Array.from({ length: size }, (_, i) => `s${i}`)
     const cells: Cell[] = []

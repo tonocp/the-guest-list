@@ -53,16 +53,19 @@ el repo es público, esa información no vive aquí.
 
 ## Prácticas de código
 
-- Sin código muerto, sin abstracciones especulativas, sin comentarios que expliquen el
-  QUÉ (los identificadores ya lo hacen) — solo el PORQUÉ cuando de verdad no es obvio.
-  Mira los comentarios existentes en `src/lib/solver.ts` y `src/lib/generator/*.ts`
-  como referencia de densidad y estilo esperados.
+- Sin código muerto ni abstracciones especulativas.
+- **Sin comentarios inline en `src/`.** El código se explica solo; el PORQUÉ (decisiones
+  de diseño, bugs medidos, trampas) vive en `docs/`, sobre todo en
+  [`docs/for-agents.md`](./docs/for-agents.md) "Trampas conocidas". Se permite como
+  mucho una línea de JSDoc en un export cuyo propósito no sea obvio por nombre y firma.
+  No reintroduzcas notas de contexto en el código: si algo hace falta saberlo, va a
+  `docs/`.
 - No añadas manejo de errores ni validaciones para escenarios que no pueden ocurrir;
-  confía en las invariantes internas ya documentadas.
-- Antes de tocar `solver.ts`, `gridLogic.ts` o cualquier cosa en `generator/`, relee
-  [`docs/procedural-generator.md`](./docs/procedural-generator.md) — varias decisiones
-  ahí (por qué nunca se seleccionan pistas binarias, por qué existe el tope de nodos)
-  son el resultado de fallos medidos, no de preferencia estética.
+  confía en las invariantes documentadas.
+- Antes de tocar `solver.ts`, `gridLogic.ts` o `generator/`, relee
+  [`docs/procedural-generator.md`](./docs/procedural-generator.md) y las "Trampas
+  conocidas" — varias decisiones (nunca seleccionar pistas binarias, el tope de nodos)
+  son resultado de fallos medidos, no de estética.
 - Tras tocar el pipeline del generador, corre `npx tsx scripts/stress-generate.ts`
   además de `npx vitest run` — los tests solo cubren un puñado de semillas fijas.
 - Sin dependencias externas de CDN/fuentes web — la app tiene que seguir funcionando
