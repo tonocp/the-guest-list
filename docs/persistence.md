@@ -18,9 +18,9 @@ difficulty }` basta para reconstruir el `Puzzle` exacto — así que solo se per
   framework.
 - **`src/lib/persistence/indexedDbGameRepository.ts`** — el adapter concreto
   (IndexedDB nativo envuelto en promesas).
-- **`src/data/puzzles/index.ts`** → `resolvePuzzle(id)` — resuelve un `Puzzle`
-  jugable por id: primero mira el registro estático (casos hechos a mano), si no,
-  regenera desde el `SavedGame` correspondiente.
+- **`src/data/resolvePuzzle.ts`** → `resolvePuzzle(id)` — reconstruye el `Puzzle`
+  jugable regenerándolo desde el `{ seed, difficulty }` del `SavedGame`
+  correspondiente. No hay registro estático de casos.
 - **`src/stores/puzzleStore.ts`** — `load(id)` resuelve el puzzle y restaura el
   progreso guardado; `persist()` se llama al final de cada acción que muta el tablero.
 

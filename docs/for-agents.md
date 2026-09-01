@@ -29,15 +29,15 @@ partidas guardadas, ver [`persistence.md`](./persistence.md)).
 
 ```
 src/types/puzzle.ts          contrato de datos único (Puzzle, Suspect, Room, Cell, ClueRule)
-src/lib/gridLogic.ts         reglas puras: isNextTo, getConflicts, getMurderer...
+src/lib/gridLogic.ts         reglas puras: isNextTo, isBesideFurniture, getConflicts, getMurderer...
 src/lib/solver.ts            backtracking + MRV + poda; countSolutions/hasUniqueSolution
 src/lib/rng.ts               PRNG determinista (mulberry32) — usar SIEMPRE esto en el generador, nunca Math.random()
 src/lib/generator/           generador procedural completo (ver procedural-generator.md)
 src/lib/persistence/         puerto GameRepository + adapter IndexedDB (ver persistence.md)
-src/data/puzzles/            casos hechos a mano + resolvePuzzle(id) (regenera casos guardados desde su semilla)
+src/data/resolvePuzzle.ts    reconstruye el Puzzle jugable regenerándolo desde el seed+difficulty del SavedGame
 src/stores/puzzleStore.ts    estado de partida (Pinia), load(id) async + autoguardado, delega reglas a gridLogic.ts
 src/views/, src/components/  UI — no reimplementan reglas, solo leen del store
-scripts/verify-puzzle.ts     verifica unicidad de los casos hechos a mano (usa solver.ts)
+scripts/verify-puzzle.ts     solver vs generador en semillas fijas: solución única y coincidente (usa solver.ts)
 scripts/stress-generate.ts   generador: tasa de éxito + tiempos, por semilla × dificultad
 scripts/gen-sprites.mjs      genera TODOS los sprites pixel-art por código (sharp)
 ```
@@ -75,8 +75,7 @@ Dirección de dependencia estricta: `types/` ← `lib/` ← `data/` ← `stores/
   vez de aparecer en 1 celda — una cama o un piano de 1 celda no se leen como tales. Los
   sprites `bed-solo.png`/`piano-solo.png` (y sus entradas en `FURNITURE_SPRITES`) se
   mantienen igualmente por completitud de tipos (todo `FurnitureType` necesita una
-  entrada) y como red de seguridad para un futuro caso hecho a mano, pero el generador
-  procedural nunca los produce.
+  entrada), pero el generador procedural nunca los produce.
   **Trampa ya sufrida al generalizar esto a un segundo tipo**: la primera versión de
   `assignMustGrow` reasignaba el `type` entre sospechosos ya emparejados (en vez de
   sacar al que de verdad creció del pool para siempre) — si el mismo sospechoso era el
@@ -89,7 +88,7 @@ Dirección de dependencia estricta: `types/` ← `lib/` ← `data/` ← `stores/
 
 ```bash
 npx vitest run                        # deben pasar todos
-npx tsx scripts/verify-puzzle.ts      # los casos hechos a mano, deben salir UNIQUE ✔
+npx tsx scripts/verify-puzzle.ts      # semillas fijas del generador, todas UNIQUE ✔
 npx tsx scripts/stress-generate.ts    # generador, tasa de éxito alta y rápido incluso en experto
 npm run build                         # vue-tsc -b && vite build, debe compilar sin errores de tipos
 ```

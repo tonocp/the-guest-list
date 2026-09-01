@@ -13,7 +13,7 @@ generación de regiones y generación de casos completos por dificultad × semil
 
 | Script | Qué hace |
 |---|---|
-| `verify-puzzle.ts` | Verifica que los casos hechos a mano tienen solución única. |
+| `verify-puzzle.ts` | Para semillas fijas por dificultad, comprueba que el solver da solución única y reproduce la solución del generador. |
 | `stress-generate.ts` | Genera un lote de casos por semilla × dificultad y reporta tasa de éxito + tiempos. |
 | `gen-sprites.mjs` | Genera todos los sprites pixel-art por código, vía `sharp`. |
 | `gen-icons.mjs` | Genera los iconos PWA desde un SVG generado por código. |

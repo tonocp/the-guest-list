@@ -1,45 +1,65 @@
 import { describe, expect, it } from 'vitest'
 import type { Cell, ClueRule } from '../types/puzzle'
 import { countSolutions, hasUniqueSolution, type SolverInput } from './solver'
-import { fiestaDisfraces } from '../data/puzzles/fiestaDisfraces'
-import { estudioYoga } from '../data/puzzles/estudioYoga'
 
-function toSolverInput(puzzle: { size: number; suspects: { id: string }[]; cells: Cell[] }, rules: ClueRule[]): SolverInput {
-  return {
-    size: puzzle.size,
-    suspectIds: puzzle.suspects.map((s) => s.id),
-    cells: puzzle.cells,
-    rules,
+describe('a full-size puzzle fixture (regression)', () => {
+  // 5x5, hand-verified unique — the end-to-end check that the solver handles a
+  // realistically shaped puzzle, not just the focused rule-type fixtures below.
+  // Room layout:  A A A B B
+  //               A A B B B
+  //               C C C D D
+  //               C C D D D
+  //               E E E E E
+  const roomGrid = [
+    ['A', 'A', 'A', 'B', 'B'],
+    ['A', 'A', 'B', 'B', 'B'],
+    ['C', 'C', 'C', 'D', 'D'],
+    ['C', 'C', 'D', 'D', 'D'],
+    ['E', 'E', 'E', 'E', 'E'],
+  ]
+  const furniture: Record<string, Cell['furniture']> = {
+    '0-0': 'sofa',
+    '2-2': 'rug',
+    '3-3': 'chair',
+    '0-3': 'plant',
+    '1-4': 'statue',
   }
-}
+  const cells: Cell[] = roomGrid.flatMap((row, r) =>
+    row.map((roomId, c) => ({ row: r, col: c, roomId, furniture: furniture[`${r}-${c}`] })),
+  )
+  const suspectIds = ['nora', 'delia', 'priya', 'marcus', 'teo']
+  const solution = {
+    nora: { row: 0, col: 0 },
+    delia: { row: 1, col: 1 },
+    priya: { row: 2, col: 2 },
+    marcus: { row: 3, col: 3 },
+    teo: { row: 4, col: 4 },
+  }
+  const rules: ClueRule[] = [
+    { type: 'on-furniture', suspect: 'nora', furniture: 'sofa' },
+    { type: 'room', suspect: 'delia', roomId: 'A' },
+    { type: 'on-furniture', suspect: 'priya', furniture: 'rug' },
+    { type: 'on-furniture', suspect: 'marcus', furniture: 'chair' },
+    { type: 'direction', subject: 'teo', dir: 'S', reference: 'marcus' },
+  ]
+  const inputWith = (rs: ClueRule[]): SolverInput => ({ size: 5, suspectIds, cells, rules: rs })
 
-describe('hand-authored puzzle fixtures (regression)', () => {
-  it('fiestaDisfraces has a unique solution matching the authored solution', () => {
-    const input = toSolverInput(fiestaDisfraces, fiestaDisfraces.rules)
-    const result = countSolutions(input, 2)
+  it('has a unique solution matching the authored solution', () => {
+    const result = countSolutions(inputWith(rules), 2)
     expect(result.count).toBe(1)
-    expect(result.solutions[0]).toEqual(fiestaDisfraces.solution)
-  })
-
-  it('estudioYoga has a unique solution matching the authored solution', () => {
-    const input = toSolverInput(estudioYoga, estudioYoga.rules)
-    const result = countSolutions(input, 2)
-    expect(result.count).toBe(1)
-    expect(result.solutions[0]).toEqual(estudioYoga.solution)
+    expect(result.solutions[0]).toEqual(solution)
   })
 
   it('reports non-unique for a deliberately under-constrained rule set', () => {
-    const input = toSolverInput(fiestaDisfraces, fiestaDisfraces.rules.slice(0, 1))
-    expect(hasUniqueSolution(input)).toBe(false)
-    expect(countSolutions(input, 2).count).toBe(2)
+    expect(hasUniqueSolution(inputWith(rules.slice(0, 1)))).toBe(false)
+    expect(countSolutions(inputWith(rules.slice(0, 1)), 2).count).toBe(2)
   })
 
   it('reports zero solutions for a contradictory rule set', () => {
-    // Nora is already pinned to (0,0) — room "A" — by the sofa clue. Forcing her
-    // into room "C" too makes her domain empty.
-    const contradictory: ClueRule[] = [...fiestaDisfraces.rules, { type: 'room', suspect: 'nora', roomId: 'C' }]
-    const input = toSolverInput(fiestaDisfraces, contradictory)
-    expect(countSolutions(input, 2).count).toBe(0)
+    // The sofa clue already pins Nora to (0,0), room "A"; also forcing her into room
+    // "C" makes her domain empty.
+    const contradictory: ClueRule[] = [...rules, { type: 'room', suspect: 'nora', roomId: 'C' }]
+    expect(countSolutions(inputWith(contradictory), 2).count).toBe(0)
   })
 })
 

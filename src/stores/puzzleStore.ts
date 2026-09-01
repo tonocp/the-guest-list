@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type { Puzzle, Position } from '../types/puzzle'
 import { getConflicts, isComplete, matchesSolution, getMurderer, type Placements } from '../lib/gridLogic'
-import { resolvePuzzle } from '../data/puzzles'
+import { resolvePuzzle } from '../data/resolvePuzzle'
 import { gameRepository, type SavedGame } from '../lib/persistence'
 
 interface HistoryEntry {
@@ -32,8 +32,8 @@ export const usePuzzleStore = defineStore('puzzle', {
   },
 
   actions: {
-    /** Resolves the puzzle by id (hand-authored or regenerated from a saved seed) and
-     * restores any saved progress. Returns false if no such puzzle exists. */
+    /** Rebuilds the puzzle from its saved `{ seed, difficulty }` and restores any saved
+     * progress. Returns false if no such saved game exists. */
     async load(id: string): Promise<boolean> {
       const puzzle = await resolvePuzzle(id)
       if (!puzzle) return false

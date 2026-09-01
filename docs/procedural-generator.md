@@ -77,12 +77,19 @@ para 2 celdas; si ninguno lo tiene, ese tipo se descarta del todo para ese caso 
 de aparecer en 1 celda. Cada sospechoso muestra como mucho una
 pista (`Suspect.clue` es un único string): se le da su hecho unario más fuerte
 disponible (`on-furniture` > `room` > `near-furniture`), y luego se minimiza el
-conjunto quitando reglas mientras la solución siga siendo única.
+conjunto quitando reglas mientras la solución siga siendo única. En la práctica
+`near-furniture` no llega a seleccionarse nunca: todo sospechoso tiene siempre un
+hecho `room`, que lo supera — los casos generados solo muestran `room` y
+`on-furniture`. El texto de `on-furniture` siempre sitúa a la persona *sobre* la celda
+del mueble (`clueText.ts` `onFurnitureText`, con guardarraíl en `clueText.test.ts`),
+nunca «junto a» / «pegado a», que son la redacción de `near-furniture`.
 
 ## Limitaciones conocidas
 
-- Los casos generados solo usan pistas de sala/mobiliario — nunca `direction` o
-  `adjacent` (los casos hechos a mano sí las usan, con más variedad narrativa).
+- Todos los casos del juego se generan proceduralmente y solo usan pistas de
+  sala/mobiliario — `direction` y `adjacent` están soportadas por el solver y el
+  `clueText`, pero `selectClues` nunca las elige (un `room` siempre las supera). Dar
+  variedad narrativa a los casos generados es trabajo futuro.
 - Solo `rug`/`bed`/`piano`/`sofa`/`screen` ocupan más de una celda; el resto sigue
   anclado a 1 celda. Ampliar esto a más tipos, o a formas más variadas, es trabajo
   futuro.

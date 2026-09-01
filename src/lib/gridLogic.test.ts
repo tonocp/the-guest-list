@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Cell, FurnitureType } from '../types/puzzle'
-import { furniturePieces, multiCellFurniturePlacements, pieceShape } from './gridLogic'
+import { furniturePieces, isBesideFurniture, multiCellFurniturePlacements, pieceShape } from './gridLogic'
 
 function gridOf(furnitureByKey: Record<string, FurnitureType>) {
   const cells: Cell[] = []
@@ -51,6 +51,37 @@ describe('furniturePieces', () => {
 
     const vertical = furniturePieces(gridOf({ '1-1': 'screen', '2-1': 'screen', '3-1': 'screen' }))[0]
     expect(vertical.missingCorner).toBeUndefined()
+  })
+})
+
+describe('isBesideFurniture', () => {
+  // Left half (cols 0-1) is room A, right half (cols 2-3) is room B. Furniture at (1,1).
+  const puzzle = {
+    cells: Array.from({ length: 4 }, (_, row) =>
+      Array.from({ length: 4 }, (_, col) => ({
+        row,
+        col,
+        roomId: col <= 1 ? 'A' : 'B',
+      })),
+    ).flat(),
+  }
+  const furniture = { row: 1, col: 1 }
+
+  it('is true on the furniture cell itself', () => {
+    expect(isBesideFurniture(puzzle, { row: 1, col: 1 }, furniture)).toBe(true)
+  })
+
+  it('is true one orthogonal step away within the same room', () => {
+    expect(isBesideFurniture(puzzle, { row: 0, col: 1 }, furniture)).toBe(true)
+    expect(isBesideFurniture(puzzle, { row: 1, col: 0 }, furniture)).toBe(true)
+  })
+
+  it('is false for a cell orthogonally adjacent but in the neighbouring room', () => {
+    expect(isBesideFurniture(puzzle, { row: 1, col: 2 }, furniture)).toBe(false)
+  })
+
+  it('is false for a same-room cell that is two steps away', () => {
+    expect(isBesideFurniture(puzzle, { row: 0, col: 0 }, furniture)).toBe(false)
   })
 })
 

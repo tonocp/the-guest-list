@@ -26,6 +26,23 @@ export function isNextTo(puzzle: Pick<Puzzle, 'cells'>, a: Position, b: Position
   return !!cellA && !!cellB && cellA.roomId === cellB.roomId
 }
 
+/**
+ * "Pegado a" un mueble (the `near-furniture` clue): the suspect's cell is the
+ * furniture's cell or orthogonally touching it, **and** in the same room as it. Unlike
+ * people's "junto a", furniture proximity never reaches across a room boundary — a cell
+ * orthogonally next to a piece but in the neighbouring room does not count.
+ */
+export function isBesideFurniture(
+  puzzle: Pick<Puzzle, 'cells'>,
+  pos: Position,
+  furnitureCell: Position,
+): boolean {
+  const suspectCell = getCell(puzzle, pos.row, pos.col)
+  const target = getCell(puzzle, furnitureCell.row, furnitureCell.col)
+  if (!suspectCell || !target || suspectCell.roomId !== target.roomId) return false
+  return Math.abs(pos.row - furnitureCell.row) + Math.abs(pos.col - furnitureCell.col) <= 1
+}
+
 export type Placements = Record<string, Position | null>
 
 export interface Conflict {

@@ -23,9 +23,9 @@ opuestos de una sala con forma irregular.
 junto_a(A, B) ⟺ adyacentes_ortogonalmente(A, B) ∨ misma_sala(A, B)
 ```
 
-Entre mobiliario y sospechosos sí puede darse la rama de adyacencia ortogonal (un
-sospechoso junto a una planta en la celda de al lado, sin compartir sala) — pero entre
-dos *sospechosos*, solo por sala compartida.
+La proximidad a un mueble («pegado a», ver tabla) también exige compartir sala con él:
+una celda ortogonalmente contigua a un mueble pero en la sala de al lado **no** cuenta.
+Ninguna relación de proximidad del juego cruza el borde de una sala.
 
 ## Tipos de pista
 
@@ -34,8 +34,8 @@ dos *sospechosos*, solo por sala compartida.
 | Sala | El sospechoso está en una sala concreta. | "Estaba en la Sala de Disfraces." |
 | Dirección | Comparación de fila o columna respecto a otro sospechoso. | "Estaba al sur de Marcus." |
 | Junto a otro | Dos sospechosos comparten sala. | "Estaba junto a Nora." |
-| Sobre mueble | La celda del sospechoso tiene ese mueble. | "Estaba sentado en una silla." |
-| Cerca de mueble | La celda del sospechoso está "junto a" una celda con ese mueble (puede negarse). | "Estaba junto a un perchero." / "No estaba junto a un perchero." |
+| Sobre mueble | La celda del sospechoso es la del mueble (o una de sus celdas, si ocupa varias). El texto siempre sitúa a la persona *sobre* el mueble, nunca a su lado. | "Estaba sentado en una silla." / "Estaba apoyado en un piano de cola." |
+| Pegado a mueble | La celda del sospechoso es la del mueble o una ortogonalmente contigua, **dentro de la misma sala** (puede negarse). | "Estaba pegado a un jarrón." / "No estaba pegado a un jarrón." |
 
 ## La víctima y el asesino
 

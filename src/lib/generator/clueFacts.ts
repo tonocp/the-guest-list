@@ -1,5 +1,5 @@
 import type { Cell, ClueRule, FurnitureType, Position } from '../../types/puzzle'
-import { isNextTo } from '../gridLogic'
+import { isBesideFurniture } from '../gridLogic'
 
 /** A true fact about the solution, tagged with which suspect's card it would appear
  * on (the rule's `suspect` / `subject` / `a`, depending on type). */
@@ -48,7 +48,7 @@ export function enumerateFacts(
     }
 
     for (const [furnitureType, furnitureCells] of furnitureCellsByType) {
-      const near = furnitureCells.some((fc) => isNextTo({ cells }, pos, { row: fc.row, col: fc.col }))
+      const near = furnitureCells.some((fc) => isBesideFurniture({ cells }, pos, { row: fc.row, col: fc.col }))
       facts.push({
         owner: id,
         rule: { type: 'near-furniture', suspect: id, furniture: furnitureType, negate: !near },

@@ -9,7 +9,7 @@ vue-router + Tailwind v4. PWA instalable y offline vía `vite-plugin-pwa` (Workb
 types/                → contrato de datos (no depende de nada)
 lib/                   → lógica de dominio pura (solo depende de types/, cero Vue/Pinia)
 lib/persistence/        → puerto GameRepository + adapter IndexedDB (ver persistence.md)
-data/puzzles/             → contenido: casos hechos a mano + resolvePuzzle(id)
+data/resolvePuzzle.ts     → reconstruye el Puzzle jugable desde el SavedGame (seed + difficulty)
 stores/                     → estado de sesión de partida (Pinia), delega reglas a lib/
 views/, components/          → UI "tonta": lee del store, no reimplementa reglas
 scripts/                      → herramientas de desarrollo (verificación, generación de assets)
@@ -22,7 +22,9 @@ un import "hacia arriba".
 
 Todo el sistema gira en torno al tipo `Puzzle` (`src/types/puzzle.ts`). El store, los
 componentes de UI y el generador procedural solo saben consumir/producir un objeto
-`Puzzle` — no importa si salió escrito a mano o generado en tiempo de ejecución.
+`Puzzle`. Hoy todos los casos se generan proceduralmente, pero nada aguas abajo
+depende de eso: cualquier objeto `Puzzle` válido (generado o escrito a mano) es
+igual de jugable.
 
 ```ts
 interface Puzzle {

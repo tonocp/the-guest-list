@@ -119,8 +119,8 @@ aunque el código funcione y los tests pasen.
 ## Verificación antes de dar algo por terminado
 
 ```bash
-npx vitest run                        # 44 tests, deben pasar todos
-npx tsx scripts/verify-puzzle.ts      # los 2 casos hechos a mano, deben salir UNIQUE ✔
+npx vitest run                        # toda la suite, deben pasar todos
+npx tsx scripts/verify-puzzle.ts      # semillas fijas del generador, todas UNIQUE ✔
 npx tsx scripts/stress-generate.ts    # generador: ~150/150, rápido incluso en experto
 npm run build                         # vue-tsc -b && vite build, sin errores de tipos
 ```
