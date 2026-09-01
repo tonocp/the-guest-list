@@ -4,18 +4,13 @@ import { generatePuzzle } from '../src/lib/generator/generatePuzzle'
 
 /**
  * Deterministic gate: for a handful of fixed seeds per difficulty, generate the puzzle
- * and confirm the shipped solver agrees — exactly one solution, not truncated, and
- * identical to the solution the generator committed to. Complements
- * `stress-generate.ts` (which only measures generator success rate and timing, never
- * re-checks the solver against the generator's own answer).
+ * and confirm `countSolutions` agrees with the answer the generator committed to —
+ * exactly one solution, not truncated, and identical. Complements `stress-generate.ts`
+ * (which only measures generator success rate and timing, never re-checks the solver
+ * against the generator's own answer).
  */
-const SEEDS_BY_DIFFICULTY: Record<Difficulty, number[]> = {
-  'muy-facil': [1, 2, 3, 4, 5],
-  facil: [1, 2, 3, 4, 5],
-  medio: [1, 2, 3, 4, 5],
-  dificil: [1, 2, 3, 4, 5],
-  experto: [1, 2, 3, 4, 5],
-}
+const DIFFICULTIES: Difficulty[] = ['muy-facil', 'facil', 'medio', 'dificil', 'experto']
+const SEEDS = [1, 2, 3, 4, 5]
 
 function verify(puzzle: Puzzle): boolean {
   const result = countSolutions(
@@ -23,31 +18,32 @@ function verify(puzzle: Puzzle): boolean {
     2,
   )
 
-  const matchesGenerator =
+  const ok =
+    !result.truncated &&
     result.count === 1 &&
     puzzle.suspects.every((s) => {
       const solved = result.solutions[0][s.id]
-      const authored = puzzle.solution[s.id]
-      return solved.row === authored.row && solved.col === authored.col
+      const expected = puzzle.solution[s.id]
+      return solved.row === expected.row && solved.col === expected.col
     })
 
   const status = result.truncated
     ? 'INCONCLUSIVE (node budget exhausted) ✘'
-    : matchesGenerator
+    : ok
       ? 'UNIQUE ✔'
       : 'AMBIGUOUS/INVALID ✘'
 
   console.log(`  ${puzzle.id.padEnd(28)} ${puzzle.size}x${puzzle.size}  ${status}`)
-  if (status !== 'UNIQUE ✔') {
+  if (!ok) {
     console.log('    solutions:', JSON.stringify(result.solutions))
   }
-  return status === 'UNIQUE ✔'
+  return ok
 }
 
 let allOk = true
-for (const [difficulty, seeds] of Object.entries(SEEDS_BY_DIFFICULTY) as [Difficulty, number[]][]) {
+for (const difficulty of DIFFICULTIES) {
   console.log(`\n${difficulty}`)
-  for (const seed of seeds) {
+  for (const seed of SEEDS) {
     const puzzle = generatePuzzle({ difficulty, seed, id: `${difficulty}-seed-${seed}` })
     if (!verify(puzzle)) allOk = false
   }

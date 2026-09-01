@@ -48,7 +48,7 @@ export function enumerateFacts(
     }
 
     for (const [furnitureType, furnitureCells] of furnitureCellsByType) {
-      const near = furnitureCells.some((fc) => isBesideFurniture({ cells }, pos, { row: fc.row, col: fc.col }))
+      const near = furnitureCells.some((fc) => isBesideFurniture(cell, fc))
       facts.push({
         owner: id,
         rule: { type: 'near-furniture', suspect: id, furniture: furnitureType, negate: !near },

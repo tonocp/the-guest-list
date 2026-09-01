@@ -2,9 +2,11 @@ import type { ClueRule, FurnitureType } from '../../types/puzzle'
 import type { ThemeRoom } from './roomThemes'
 
 // All indefinite ("un"/"una") so "pegado a {phrase}" never needs the "a el" → "al"
-// contraction. Only used by the `near-furniture` clue — `on-furniture` has its own
-// wording per type in `onFurnitureText`.
-const FURNITURE_PHRASE: Record<FurnitureType, string> = {
+// contraction. Only used by the `near-furniture` clue (which `selectClues` never picks
+// for generated puzzles today — a `room` fact always outranks it — but the rule type is
+// fully plumbed for the room-variety follow-up; see procedural-generator.md).
+// `on-furniture` has its own wording per type in `onFurnitureText`.
+export const FURNITURE_PHRASE: Record<FurnitureType, string> = {
   plant: 'una planta',
   rug: 'una alfombra',
   chair: 'una silla',
@@ -36,15 +38,16 @@ const DIRECTION_LABEL: Record<'N' | 'S' | 'E' | 'W', string> = {
  */
 function onFurnitureText(furniture: FurnitureType, gender: 'f' | 'm'): string {
   const g = (m: string, f: string) => (gender === 'f' ? f : m)
+  const sentado = g('sentado', 'sentada')
   switch (furniture) {
     case 'chair':
-      return `Estaba ${g('sentado', 'sentada')} en una silla.`
+      return `Estaba ${sentado} en una silla.`
     case 'sofa':
-      return `Estaba ${g('sentado', 'sentada')} en el sofá.`
+      return `Estaba ${sentado} en el sofá.`
     case 'chest':
-      return `Estaba ${g('sentado', 'sentada')} sobre un baúl.`
+      return `Estaba ${sentado} sobre un baúl.`
     case 'table':
-      return `Estaba ${g('sentado', 'sentada')} a una mesa.`
+      return `Estaba ${sentado} a una mesa.`
     case 'bed':
       return `Estaba ${g('tumbado', 'tumbada')} en la cama.`
     case 'rug':

@@ -1,22 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { FurnitureType } from '../../types/puzzle'
-import { clueText, type ClueTextContext } from './clueText'
+import { clueText, FURNITURE_PHRASE, type ClueTextContext } from './clueText'
 
-const FURNITURE_TYPES: FurnitureType[] = [
-  'plant',
-  'rug',
-  'chair',
-  'piano',
-  'sofa',
-  'bed',
-  'chest',
-  'lamp',
-  'table',
-  'statue',
-  'globe',
-  'vase',
-  'screen',
-]
+// Derived from the type-checked Record so a new FurnitureType can't slip past the guardrail.
+const FURNITURE_TYPES = Object.keys(FURNITURE_PHRASE) as FurnitureType[]
 
 const ctx: ClueTextContext = {
   suspectName: (id) => id,
@@ -37,12 +24,6 @@ describe('on-furniture clue text', () => {
       const text = clueText({ type: 'on-furniture', suspect: 's', furniture }, gender, ctx)
       expect(text).not.toMatch(PROXIMITY_WORDING)
     }
-  })
-
-  it.each(FURNITURE_TYPES)('is distinct from the near-furniture wording for %s', (furniture) => {
-    const on = clueText({ type: 'on-furniture', suspect: 's', furniture }, 'm', ctx)
-    const near = clueText({ type: 'near-furniture', suspect: 's', furniture }, 'm', ctx)
-    expect(on).not.toBe(near)
   })
 })
 

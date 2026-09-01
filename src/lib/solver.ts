@@ -47,7 +47,7 @@ function satisfiesUnary(rule: ClueRule, pos: Position, cells: Cell[]): boolean {
       return cell.furniture === rule.furniture
     case 'near-furniture': {
       const furnitureCells = cells.filter((c) => c.furniture === rule.furniture)
-      const near = furnitureCells.some((fc) => isBesideFurniture({ cells }, pos, { row: fc.row, col: fc.col }))
+      const near = furnitureCells.some((fc) => isBesideFurniture(cell, fc))
       return rule.negate ? !near : near
     }
     default:

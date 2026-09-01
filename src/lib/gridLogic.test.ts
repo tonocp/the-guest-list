@@ -55,33 +55,25 @@ describe('furniturePieces', () => {
 })
 
 describe('isBesideFurniture', () => {
-  // Left half (cols 0-1) is room A, right half (cols 2-3) is room B. Furniture at (1,1).
-  const puzzle = {
-    cells: Array.from({ length: 4 }, (_, row) =>
-      Array.from({ length: 4 }, (_, col) => ({
-        row,
-        col,
-        roomId: col <= 1 ? 'A' : 'B',
-      })),
-    ).flat(),
-  }
-  const furniture = { row: 1, col: 1 }
+  // cols 0-1 are room A, cols 2-3 are room B. Furniture sits at (1,1).
+  const cellAt = (row: number, col: number): Cell => ({ row, col, roomId: col <= 1 ? 'A' : 'B' })
+  const furniture = cellAt(1, 1)
 
   it('is true on the furniture cell itself', () => {
-    expect(isBesideFurniture(puzzle, { row: 1, col: 1 }, furniture)).toBe(true)
+    expect(isBesideFurniture(cellAt(1, 1), furniture)).toBe(true)
   })
 
   it('is true one orthogonal step away within the same room', () => {
-    expect(isBesideFurniture(puzzle, { row: 0, col: 1 }, furniture)).toBe(true)
-    expect(isBesideFurniture(puzzle, { row: 1, col: 0 }, furniture)).toBe(true)
+    expect(isBesideFurniture(cellAt(0, 1), furniture)).toBe(true)
+    expect(isBesideFurniture(cellAt(1, 0), furniture)).toBe(true)
   })
 
   it('is false for a cell orthogonally adjacent but in the neighbouring room', () => {
-    expect(isBesideFurniture(puzzle, { row: 1, col: 2 }, furniture)).toBe(false)
+    expect(isBesideFurniture(cellAt(1, 2), furniture)).toBe(false)
   })
 
   it('is false for a same-room cell that is two steps away', () => {
-    expect(isBesideFurniture(puzzle, { row: 0, col: 0 }, furniture)).toBe(false)
+    expect(isBesideFurniture(cellAt(0, 0), furniture)).toBe(false)
   })
 })
 

@@ -51,8 +51,9 @@ describe('a full-size puzzle fixture (regression)', () => {
   })
 
   it('reports non-unique for a deliberately under-constrained rule set', () => {
-    expect(hasUniqueSolution(inputWith(rules.slice(0, 1)))).toBe(false)
-    expect(countSolutions(inputWith(rules.slice(0, 1)), 2).count).toBe(2)
+    const underConstrained = inputWith(rules.slice(0, 1))
+    expect(hasUniqueSolution(underConstrained)).toBe(false)
+    expect(countSolutions(underConstrained, 2).count).toBe(2)
   })
 
   it('reports zero solutions for a contradictory rule set', () => {
