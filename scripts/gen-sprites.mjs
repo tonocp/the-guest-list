@@ -81,7 +81,6 @@ const GLOBE_OCEAN = hex('#5f8fa8')
 const GLOBE_LAND = hex('#7fa563')
 const GLOBE_LAND_DK = hex('#5c7d47')
 const GLOBE_RING = hex('#b8935a')
-const GLOBE_STAND = SHELF // same wood tone as the chest, reused rather than re-declared
 // Lighter than the original near-black (#241c22): that was so close in value to the
 // universal DARK outline that the outline all but disappeared against the body,
 // leaving the silhouette with no clean edge to read against.
@@ -284,16 +283,23 @@ async function render(canvas, filename) {
 
 // ---- sprites -----------------------------------------------------------
 
+/** Potted plant, top-down: the pot sits FULLY BEHIND the canopy, centered on the same
+ * point, not as a separate band peeking out below it — a pot-at-the-bottom,
+ * bushy-canopy-above composition (the original version of this function) is a side
+ * view, the same front-view mistake `vase`/`bookshelf` had, just harder to notice
+ * because a bushy potted-plant icon is such a familiar silhouette. Left un-rounded
+ * (no `clipCorners`) on purpose: only its 4 corners are meant to peek out past the
+ * round canopy sitting on top of it, since a circle inscribed in a square always
+ * leaves the corners exposed — that's what actually reads as "square pot, round bush
+ * overhanging it on every side" instead of "pot in front, plant behind." */
 async function plant() {
   const c = newCanvas()
-  bevel(c, 4, 11, 11, 13, TERRACOTTA, TERRACOTTA_DK, TERRACOTTA_DK)
-  clipCorners(c, 4, 11, 11, 13, 1)
-  circle(c, 8, 7, 4.3, LEAF)
-  circle(c, 4.8, 9, 2.3, LEAF)
-  circle(c, 11.2, 9, 2.3, LEAF)
-  circle(c, 10, 5, 2, LEAF_DK)
-  circle(c, 6, 4.5, 1.6, LEAF_LT)
-  circle(c, 8.5, 9, 1.4, LEAF_LT)
+  bevel(c, 3, 3, 12, 12, TERRACOTTA, TERRACOTTA_DK, TERRACOTTA_DK)
+  circle(c, 7.5, 7.5, 4.3, LEAF)
+  circle(c, 5.3, 6, 2.1, LEAF_LT)
+  circle(c, 10.2, 6.2, 2, LEAF_DK)
+  circle(c, 5.8, 9.8, 2, LEAF_DK)
+  circle(c, 10, 9.6, 1.8, LEAF_LT)
   center(c)
   outline(c, DARK)
   await render(c, 'plant.png')
@@ -752,12 +758,13 @@ async function lamp() {
 
 /** Round table, top-down: a wood rim + surface, and one off-center grain knot pair (our
  * usual light-from-top-left highlight). No legs poking past the edge, unlike
- * chair/sofa/globe — a round tabletop typically overhangs its base (most have a single
+ * chair/sofa — a round tabletop typically overhangs its base (most have a single
  * central pedestal, not 4 corner legs), so directly from above the base is fully hidden
  * under the top; 4 legs peeking out here read more like debris on the rim than
- * furniture. A first pass used a tight stack of same-sized rings (rim/surface/ring/
- * surface all within ~2px of each other), which read as a mottled blob/rock instead of
- * wood — fixed by dropping to a single rim + surface pair. */
+ * furniture. `globe()`'s stand follows the same reasoning. A first pass used a tight
+ * stack of same-sized rings (rim/surface/ring/surface all within ~2px of each other),
+ * which read as a mottled blob/rock instead of wood — fixed by dropping to a single rim
+ * + surface pair. */
 async function table() {
   const c = newCanvas()
   circle(c, 8, 8, 6, TABLE_DK) // rim
@@ -791,16 +798,16 @@ async function statue() {
   await render(c, 'statue.png')
 }
 
-/** Globe on a stand, top-down: looking straight down you mostly see the sphere's top
- * (continents scattered over ocean) ringed by the brass meridian band, with the wooden
- * stand's foot peeking out at the bottom (1px past `FURNITURE_MARGIN`, same convention
- * as the chair's legs and the table's). */
+/** Globe on a stand, top-down: looking straight down you see the sphere's top
+ * (continents scattered over ocean) ringed by the brass meridian band. No visible
+ * stand: the original version drew the wooden stand's foot peeking out below the
+ * sphere, the same front-view mistake `vase`/`plant`/`bookshelf` had — just easy to
+ * miss because "globe on a stand" is such a familiar side-view silhouette. The stand
+ * here is a straight vertical post (not a splayed tripod), so like the round table's
+ * single central pedestal, it sits directly beneath the sphere's widest point and is
+ * fully hidden by its overhang from directly above. */
 async function globe() {
   const c = newCanvas()
-  const y1 = 15 - FURNITURE_MARGIN
-  const cx = 8
-
-  rect(c, cx - 2, y1 - 1, cx + 1, y1 + 1, GLOBE_STAND)
   circle(c, 8, 8, 5.5, GLOBE_RING)
   circle(c, 8, 8, 4.7, GLOBE_OCEAN)
   circle(c, 6, 6, 1.6, GLOBE_LAND)
@@ -812,15 +819,39 @@ async function globe() {
   await render(c, 'globe.png')
 }
 
+/** Vase, top-down: 2 earlier versions both drew a bulbous body + narrow neck stacked
+ * vertically (only the flower arrangement changed between them) — that stack is a SIDE
+ * PROFILE, the same front-view mistake as `bookshelf`, just less obvious because a vase
+ * silhouette is so familiar from icons drawn that way. A vase is a vertical vessel like
+ * `lamp` (see its doc comment): from directly above, its body is hidden entirely
+ * beneath its own rim, so the correct cenital drawing is concentric circles — the same
+ * structure `lamp()` uses (outer rim → body → dark opening looking down into it → a
+ * small top-left highlight), not a stacked neck-and-body silhouette.
+ * **No flower canopy** (the 3rd version had one, following `plant()`'s round-cluster
+ * convention): a leafy canopy in the same `LEAF`/`LEAF_DK`/`LEAF_LT` greens as `plant`
+ * made the two types redundant in both look AND meaning — "container with a green
+ * cluster on top" is a single idea drawn twice. A vase doesn't need flowers to be a
+ * vase; splitting the two concepts cleanly (`plant` = leafy potted plant, `vase` =
+ * empty decorative vessel) removes the overlap instead of just tweaking the foliage's
+ * shape again. What identifies this as a vase rather than a repaint of `lamp`/`globe`
+ * (which reduce to the same concentric-circles structure by necessity — any vertical
+ * vessel does, viewed strictly from above) is structural, not just color: a gilded rim
+ * trim (`GLOBE_RING`, the same brass tone as the globe's meridian band, reused for a
+ * ceramic glaze accent) and 2 handles punched with a hollow loop (`null`-punched
+ * circles, the same technique `clipCorners` uses for corner notches) breaking the
+ * perfect-circle silhouette on 2 opposite sides — a feature specific to urn-style
+ * vases that neither a lamp shade nor a globe nor a plant pot has. */
 async function vase() {
   const c = newCanvas()
-  bevel(c, 5, 9, 10, 13, VASE_BODY, VASE_LT, VASE_DK)
-  clipCorners(c, 5, 9, 10, 13, 1)
-  rect(c, 6, 6, 9, 9, VASE_DK)
-  bevel(c, 6, 4, 9, 6, VASE_BODY, VASE_LT, VASE_DK)
-  circle(c, 5.5, 4, 1.2, LEAF)
-  circle(c, 8, 3.8, 1.2, LEAF_LT)
-  circle(c, 10.5, 4, 1.2, LEAF)
+  circle(c, 8, 8, 5, VASE_DK)
+  circle(c, 7.7, 7.7, 4.2, VASE_BODY)
+  circle(c, 8, 8, 3, GLOBE_RING)
+  circle(c, 8, 8, 2.4, VASE_DK)
+  circle(c, 6.6, 6.6, 0.9, VASE_LT)
+  circle(c, 2.3, 8, 1.3, VASE_DK) // left handle
+  circle(c, 13.7, 8, 1.3, VASE_DK) // right handle
+  circle(c, 2.3, 8, 0.6, null) // handle hole
+  circle(c, 13.7, 8, 0.6, null) // handle hole
   center(c)
   outline(c, DARK)
   await render(c, 'vase.png')

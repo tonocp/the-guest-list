@@ -72,8 +72,8 @@ nueva, no una continuación de aquel intento.
   como baúl. El metal (`CHEST_METAL`/`_DK`/`_LT`) usa un tono azulado-frío deliberado,
   no un gris cálido cercano al tono de la madera — con poco contraste entre ambos, la
   correa y el candado se perdían contra el fondo de madera y el baúl se leía plano),
-  `globe` (globo terráqueo — esfera con continentes y el pie del soporte
-  asomando) y `statue` (estatua sobre pedestal — base de piedra con una figura clara
+  `globe` (globo terráqueo — esfera con continentes, anillo de latón; ver más abajo por
+  qué ya no se ve el pie del soporte) y `statue` (estatua sobre pedestal — base de piedra con una figura clara
   encima, cabeza y hombros como dos círculos superpuestos; sustituyó a un `coatrack`
   inicial — un perchero visto en planta apenas tiene huella en el suelo, mismo problema
   de fondo que los 4 originales, así que ningún dibujo de "abrigos alrededor de un
@@ -92,6 +92,54 @@ nueva, no una continuación de aquel intento.
   ellos, en vez de un único bitmap continuo como el resto del mobiliario multi-celda;
   ver más abajo). Los 13 tipos actuales: `plant`, `rug`, `chair`, `piano`, `sofa`, `bed`,
   `chest`, `lamp`, `table`, `statue`, `globe`, `vase`, `screen`.
+  **`vase` tuvo una variante del mismo problema, sin necesitar sustitución, en 3
+  pasadas**: la primera versión dibujaba un cuerpo abombado + un cuello estrecho
+  apilados verticalmente, con 3 hojas en fila horizontal justo encima — ese apilado
+  vertical es un perfil lateral, el mismo error de fondo que `bookshelf`, solo que menos
+  obvio porque esa silueta de "jarrón" es la que cualquiera dibujaría a mano por
+  costumbre de icono, no porque se corresponda con la vista real. Un segundo intento
+  solo tocó las hojas (pasarlas a un cluster redondeado, como `plant()`) sin tocar el
+  cuerpo apilado — insuficiente, porque el problema real era el cuerpo, no las hojas.
+  Un jarrón es un recipiente vertical como `lamp` (ver su comentario): visto
+  estrictamente desde arriba, el cuerpo queda oculto por completo bajo su propia boca,
+  así que el dibujo cenital correcto son círculos concéntricos — la misma estructura de
+  `lamp()` (aro exterior → cuerpo → interior oscuro, mirando hacia abajo dentro del
+  jarrón → un brillo pequeño arriba a la izquierda) — no un perfil de cuello y cuerpo
+  apilados. **Pero al arreglar la perspectiva, `vase` y `plant` quedaron demasiado
+  parecidos en significado Y en aspecto**: los dos eran ahora "recipiente + cluster
+  verde redondeado encima", con literalmente los mismos tonos `LEAF`/`LEAF_DK`/
+  `LEAF_LT`. La 3ª pasada no ajustó el cluster otra vez — lo quitó del todo: `plant` se
+  queda con "planta con hojas en maceta" y `vase` pasa a ser un recipiente decorativo
+  vacío, sin flores. Como una vasija circular sin más se confunde con `lamp`/`globe`
+  (cualquier recipiente vertical se reduce a círculos concéntricos visto en planta), lo
+  que diferencia a `vase` ahora es estructural, no solo de color: un anillo dorado
+  (`GLOBE_RING`, el mismo tono metálico de la banda del globo terráqueo, reutilizado
+  como acabado de esmalte) y 2 asas con un hueco perforado (`null`, la misma técnica de
+  `clipCorners` para las muescas de esquina) que rompen la silueta circular perfecta en
+  2 lados opuestos — un detalle propio de una vasija/urna que ni una lámpara, ni un
+  globo, ni una maceta tienen.
+  **Arreglar `vase` sacó a la luz que `plant` tenía el mismo problema de fondo, sin que
+  nadie lo hubiera notado hasta entonces**: la maceta se dibujaba como una franja
+  terracota pegada al borde inferior del icono, con el follaje entero apilado ENCIMA —
+  exactamente la composición "maceta delante, planta detrás/arriba" de un icono visto de
+  lado, el mismo vicio que `vase`/`bookshelf`, solo que menos evidente porque un
+  icono de "planta frondosa en tiesto" es un dibujo tan familiar que nadie cuestionaba
+  su perspectiva. El arreglo: la maceta pasa a ser un cuadrado centrado en el mismo
+  punto que el follaje, no una franja debajo — y deliberadamente sin `clipCorners`, para
+  que solo sus 4 esquinas asomen más allá del follaje redondeado (un círculo inscrito en
+  un cuadrado siempre deja las esquinas fuera). Eso es lo que de verdad se leería desde
+  arriba: "tiesto cuadrado, mata redonda que lo desborda por todos los lados", no
+  "tiesto delante, planta detrás".
+  **Revisar `plant` llevó a revisar `globe` por el mismo motivo**: la versión original
+  dibujaba el pie de madera del soporte asomando justo debajo de la esfera — el mismo
+  "objeto delante/debajo, cuerpo principal encima" que `vase`/`plant`/`bookshelf`, y con
+  la misma excusa de fondo (`table()` lo comentaba explícitamente como precedente
+  aceptado, sin cuestionarlo). El soporte de `globe` es un poste recto, no una pata
+  ni un trípode que se abra más ancho que la esfera — así que, igual que el pedestal
+  central de la mesa redonda, queda completamente oculto bajo el punto más ancho de la
+  esfera visto desde arriba. Se quitó el pie sin más (no se inventó un trípode: eso
+  habría cambiado el objeto, no solo su perspectiva) y con él la constante
+  `GLOBE_STAND`, que se quedó sin ningún uso.
 - **Mobiliario multi-celda** (`rug`, `bed`, `piano`, `sofa`, `screen` — ver
   [`procedural-generator.md`](./procedural-generator.md) para cómo crece su footprint):
   salvo `screen` (ver más abajo), cada pieza de más de 1 celda se renderiza como **una
