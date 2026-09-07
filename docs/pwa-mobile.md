@@ -32,6 +32,20 @@ el icono abre la app a pantalla completa (sin barra de Safari). Si abre dentro d
 Safari con la barra visible, el `<meta>` no se está aplicando — suele ser caché;
 recarga la página una vez antes de añadirla.
 
+## Safe areas (notch / Dynamic Island / home indicator)
+
+El `<meta viewport>` lleva `viewport-fit=cover`, así que en modo standalone el contenido
+ocupa toda la pantalla y hay que reservar los márgenes a mano con
+`env(safe-area-inset-*)`:
+
+- `PlayView.vue` (`.board-layout`): `padding` con los cuatro insets + `box-sizing:
+  border-box` sobre el `height: 100dvh`.
+- `PuzzleListView.vue` (`.safe-area`): `padding` = base + inset en los cuatro lados.
+
+Sin esto, en iOS la barra de estado se come el encabezado y la barra de acciones queda
+bajo el indicador de inicio. El breakpoint `md` reemplaza el padding por el de
+escritorio.
+
 ## Cómo verificar
 
 - **Chrome de escritorio** en `npm run preview` (`https://localhost:4173`, que sí es

@@ -93,6 +93,8 @@ watch(() => route.params.id, loadFromRoute)
   grid-template-areas: 'header' 'board' 'suspects' 'actions';
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
   background: #e8e0cf;
 }
 

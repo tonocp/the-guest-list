@@ -64,6 +64,13 @@ Cómo crece el footprint: [`procedural-generator.md`](./procedural-generator.md)
 
 ## Trampas de render (si tocas `BoardGrid.vue`)
 
+- **Las pistas (`gridTemplateColumns`/`Rows`) tienen que ser una longitud definida
+  (`repeat(N, var(--cell))`), no `1fr` + `aspect-ratio`.** Los `<img>` multi-celda son
+  hijos directos del grid con `w-full h-full`: si el alto del área se deriva solo de
+  `aspect-ratio`, Safari (PWA standalone en iOS) no resuelve el `height: 100%` y el
+  `<img>` cae a su tamaño intrínseco (el PNG a escala ×8), reventando el tablero. Con
+  celda definida (`min(92vw / N, 4rem)`) el porcentaje resuelve en todos los motores.
+  El `overflow-hidden` del contenedor es un cinturón de seguridad extra.
 - **CSS Grid**: como las piezas multi-celda usan `gridColumn`/`gridRow` explícitos,
   las N² casillas normales *también* necesitan posición explícita. En auto-flow, Grid
   reserva primero las celdas explícitas y empuja algunas casillas a una fila implícita

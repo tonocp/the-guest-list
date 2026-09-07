@@ -71,6 +71,12 @@ Dirección de dependencia estricta: `types/` ← `lib/` ← `data/` ← `stores/
   un sospechoso sin relación → segunda pieza de ese tipo en otra sala. El fix saca al
   grower del pool para siempre. Test de regresión en `furniture.test.ts`
   ("never produces two placements of the same type").
+- **El grid de `BoardGrid.vue` usa pistas de longitud definida (`var(--cell)`), no
+  `1fr` + `aspect-ratio`**: Safari en PWA standalone no resuelve `height: 100%` contra
+  una caja dimensionada solo por `aspect-ratio` y los `<img>` multi-celda reventaban a
+  su tamaño intrínseco. Detalle en [`visual-design.md`](./visual-design.md) "Trampas de
+  render". Los márgenes de safe area van en `PlayView`/`PuzzleListView`
+  ([`pwa-mobile.md`](./pwa-mobile.md)).
 - **`near-furniture` es alcanzable pero nunca seleccionado**: todo sospechoso tiene un
   hecho `room` (fuerza 3) que supera a `near-furniture` (2). Los casos generados solo
   muestran `room` y `on-furniture`. El tipo sigue plumbed end-to-end para la variedad
