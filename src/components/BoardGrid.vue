@@ -106,12 +106,11 @@ function onCellClick(row: number, col: number) {
 
 <template>
   <div
-    class="grid mx-auto select-none rounded-sm shadow-[0_6px_0_rgba(61,52,40,0.35)]"
+    class="grid mx-auto select-none overflow-hidden rounded-sm shadow-[0_6px_0_rgba(61,52,40,0.35)]"
     :style="{
-      gridTemplateColumns: `repeat(${puzzle.size}, 1fr)`,
-      gridTemplateRows: `repeat(${puzzle.size}, 1fr)`,
-      aspectRatio: '1 / 1',
-      width: `min(92vw, ${puzzle.size * 4}rem)`,
+      '--cell': `min(92vw / ${puzzle.size}, 4rem)`,
+      gridTemplateColumns: `repeat(${puzzle.size}, var(--cell))`,
+      gridTemplateRows: `repeat(${puzzle.size}, var(--cell))`,
       border: `3px solid ${WALL_COLOR}`,
     }"
   >

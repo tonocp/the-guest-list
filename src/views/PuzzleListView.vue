@@ -77,7 +77,7 @@ const DIFFICULTIES: Difficulty[] = ['muy-facil', 'facil', 'medio', 'dificil', 'e
 </script>
 
 <template>
-  <main class="max-w-2xl mx-auto p-4">
+  <main class="safe-area max-w-2xl mx-auto p-4">
     <header class="mb-6 text-center">
       <h1 class="pixel-heading text-2xl text-[#3d3428]">🔍 The Guest List</h1>
       <p class="text-sm text-[#7a6f5c] mt-2">
@@ -143,3 +143,12 @@ const DIFFICULTIES: Difficulty[] = ['muy-facil', 'facil', 'medio', 'dificil', 'e
     <HelpModal :open="helpOpen" @close="helpOpen = false" />
   </main>
 </template>
+
+<style scoped>
+.safe-area {
+  padding-top: calc(1rem + env(safe-area-inset-top));
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  padding-left: calc(1rem + env(safe-area-inset-left));
+  padding-right: calc(1rem + env(safe-area-inset-right));
+}
+</style>
